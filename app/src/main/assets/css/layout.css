@@ -1,0 +1,146 @@
+/* Copyright AltraConsulenza Snc */
+/* Generated on: 2026-05-09 (Europe/Rome) */
+/* inizio file layout.css */
+
+html,
+body {
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+}
+
+.app {
+    height: 100%;
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    grid-template-rows: 1fr 0.18fr;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    box-sizing: border-box;
+    overflow: hidden;
+    min-height: 0;
+}
+
+/* LEFT */
+.left {
+    display: grid;
+    grid-template-rows: 0.3fr 1fr;
+    gap: 0.5rem;
+}
+
+.reparti {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: repeat(2, 1fr);
+    gap: 0.5rem;
+}
+
+.servizi {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: repeat(4, 1fr);
+    gap: 0.5rem;
+}
+
+/* RIGHT */
+.right {
+    display: grid;
+    grid-template-rows: 40% auto 3.8rem 1fr;
+    height: 100%;
+    gap: 0.5rem;
+    overflow: hidden;
+    min-height: 0;
+}
+
+/* LISTA */
+.lista {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    overflow-y: scroll;
+    min-height: 0;
+    max-height: 100%;
+    padding: 0.25rem;
+    box-sizing: border-box;
+}
+
+.row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    min-height: 2.4rem;
+    padding: 0 0.6rem;
+    box-sizing: border-box;
+    flex-shrink: 0;
+}
+/* SUMMARY */
+.summary {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+
+    height: 4.5rem;
+    /* BLOCCO REALE */
+}
+
+/* SELECTED BAR */
+.selected-bar {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr;
+    gap: 0.5rem;
+    height: 3.8rem;
+}
+
+
+.selected-display {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 0.4rem 0.6rem;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+.selected-delete,
+.selected-discount {
+    width: 100%;
+    height: 100%;
+}
+
+/* DISPLAY */
+.display {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 0.5rem;
+    height: 0;
+    overflow: hidden;
+    padding: 0;
+    border: none;
+}
+
+/* KEYPAD */
+.keypad {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: repeat(4, 1fr);
+    gap: 0.5rem;
+    height: 100%;
+}
+
+/* FOOTER */
+.footer {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.5rem;
+}
+
+/* BUTTON */
+.btn {
+    width: 100%;
+    height: 100%;
+    font-size: 1rem;
+}
+
+/* fine file layout.css */
