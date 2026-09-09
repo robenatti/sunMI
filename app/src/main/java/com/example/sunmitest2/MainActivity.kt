@@ -6,16 +6,19 @@ package com.example.sunmitest2
 
 import android.app.Activity
 import android.os.Bundle
+import android.webkit.JavascriptInterface
+import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
-import android.webkit.JavascriptInterface
 import android.widget.Toast
+import androidx.webkit.WebViewAssetLoader
+import com.example.sunmitest2.printer.SunmiPrinterDriver
 import com.sunmi.peripheral.printer.InnerPrinterCallback
 import com.sunmi.peripheral.printer.InnerPrinterManager
 import com.sunmi.peripheral.printer.InnerResultCallback
 import com.sunmi.peripheral.printer.SunmiPrinterService
 import org.json.JSONObject
-import com.example.sunmitest2.printer.SunmiPrinterDriver
 
 class MainActivity : Activity() {
 
@@ -36,12 +39,10 @@ class MainActivity : Activity() {
         override fun onConnected(service: SunmiPrinterService) {
             printerService = service
             printerDriver = SunmiPrinterDriver(service, callback, this@MainActivity)
-            //Toast.makeText(this@MainActivity, "STAMPANTE CONNESSA", Toast.LENGTH_LONG).show()
         }
 
         override fun onDisconnected() {
             printerService = null
-            //Toast.makeText(this@MainActivity, "STAMPANTE DISCONNESSA", Toast.LENGTH_LONG).show()
         }
     }
 
@@ -50,7 +51,6 @@ class MainActivity : Activity() {
         @JavascriptInterface
         fun exec(json: String) {
             runOnUiThread {
-                //Toast.makeText(this@MainActivity, "JS CALL: $json", Toast.LENGTH_SHORT).show()
                 handleCommand(json)
             }
         }
@@ -64,20 +64,30 @@ class MainActivity : Activity() {
         webView = WebView(this)
         setContentView(webView)
 
+        val assetLoader = WebViewAssetLoader.Builder()
+            .addPathHandler("/assets/", WebViewAssetLoader.AssetsPathHandler(this))
+            .build()
+
         webView.settings.javaScriptEnabled = true
         webView.settings.domStorageEnabled = true
-        webView.settings.allowFileAccess = true
-        webView.settings.allowFileAccessFromFileURLs = true
-        webView.settings.allowUniversalAccessFromFileURLs = true
+        webView.settings.allowFileAccess = false
+        webView.settings.allowContentAccess = false
         webView.settings.mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
 
-        webView.webViewClient = WebViewClient()
+        webView.webViewClient = object : WebViewClient() {
+            override fun shouldInterceptRequest(
+                view: WebView?,
+                request: WebResourceRequest
+            ): WebResourceResponse? {
+                return assetLoader.shouldInterceptRequest(request.url)
+            }
+        }
 
         webView.addJavascriptInterface(Bridge(), "Android")
 
         WebView.setWebContentsDebuggingEnabled(true)
 
-        webView.loadUrl("file:///android_asset/index.html")
+        webView.loadUrl("https://appassets.androidplatform.net/assets/index.html")
     }
 
     private fun handleCommand(json: String) {
@@ -86,8 +96,6 @@ class MainActivity : Activity() {
             val id = req.getString("id")
             val action = req.getString("action")
 
-            //Toast.makeText(this, "ACTION: $action", Toast.LENGTH_SHORT).show()
-
             when (action) {
 
                 "hello" -> {
@@ -95,10 +103,7 @@ class MainActivity : Activity() {
                 }
 
                 "print" -> {
-                    //Toast.makeText(this, "PRINT REQUEST", Toast.LENGTH_SHORT).show()
-
                     if (!::printerDriver.isInitialized) {
-                        //Toast.makeText(this, "DRIVER NON PRONTO", Toast.LENGTH_SHORT).show()
                         sendError(id, "PRINTER_NOT_READY", "Stampante non pronta")
                         return
                     }
