@@ -5,6 +5,7 @@
 package com.example.sunmitest2
 
 import android.app.Activity
+import android.os.Build
 import android.os.Bundle
 import android.webkit.JavascriptInterface
 import android.webkit.WebResourceRequest
@@ -100,6 +101,18 @@ class MainActivity : Activity() {
 
                 "hello" -> {
                     sendSuccess(id, JSONObject().put("msg", "HELLO DAL NATIVE"))
+                }
+
+                "hardware_status" -> {
+                    val data = JSONObject()
+                    data.put("androidBridge", true)
+                    data.put("printerService", printerService != null)
+                    data.put("printerDriver", ::printerDriver.isInitialized)
+                    data.put("manufacturer", Build.MANUFACTURER ?: "")
+                    data.put("model", Build.MODEL ?: "")
+                    data.put("android", Build.VERSION.RELEASE ?: "")
+                    data.put("sdk", Build.VERSION.SDK_INT)
+                    sendSuccess(id, data)
                 }
 
                 "print" -> {

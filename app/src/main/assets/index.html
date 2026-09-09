@@ -6,23 +6,42 @@
     <title>SolX POS</title>
     <link rel="stylesheet" href="css/layout.css">
     <link rel="stylesheet" href="css/theme.css">
+    <link rel="stylesheet" href="css/boot.css">
     <link id="viewStyle" rel="stylesheet" href="">
 </head>
 <body>
-    <div id="appView"></div>
+    <div id="bootScreen" class="boot-screen">
+        <div class="boot-monitor">
+            <div class="boot-title">SOLX POS SYSTEM BOOT</div>
+            <div class="boot-separator">------------------------------------------------------------</div>
+            <div id="bootLog" class="boot-log">
+                <div class="boot-line boot-info">[....] Power on</div>
+            </div>
+            <div id="bootSummary" class="boot-summary"></div>
+            <div id="bootActions" class="boot-actions">
+                <button id="bootRetry" class="boot-button" type="button">RIPROVA</button>
+                <button id="bootDetails" class="boot-button" type="button">DETTAGLI</button>
+            </div>
+            <pre id="bootTechnical" class="boot-technical"></pre>
+            <div class="boot-cursor">_</div>
+        </div>
+    </div>
+
+    <div id="appView" style="display:none"></div>
     <div id="appError" class="app-error"></div>
 
-    <script src="js/vendor/pouchdb-9.0.0.min.js"></script>
-    <script src="js/config.js"></script>
-    <script src="js/interfaceKotlin.js"></script>
-    <script src="js/receiptConvert.js"></script>
-    <script src="js/db.js"></script>
-    <script src="js/catalog.js"></script>
-    <script src="js/fiscal.js"></script>
-    <script src="js/posFlow.js"></script>
-    <script src="js/reports.js"></script>
-    <script src="js/router.js"></script>
-    <script src="js/barcode.js"></script>
-    <script src="js/app.js"></script>
+    <script src="js/boot.js"></script>
+    <script src="js/vendor/pouchdb-9.0.0.min.js" onerror="BootTerminal.assetFailure('PouchDB')"></script>
+    <script src="js/config.js" onerror="BootTerminal.assetFailure('Config')"></script>
+    <script src="js/interfaceKotlin.js" onerror="BootTerminal.assetFailure('Bridge Android')"></script>
+    <script src="js/receiptConvert.js" onerror="BootTerminal.assetFailure('Receipt renderer')"></script>
+    <script src="js/db.js" onerror="BootTerminal.assetFailure('DB')"></script>
+    <script src="js/catalog.js" onerror="BootTerminal.assetFailure('Catalog')"></script>
+    <script src="js/fiscal.js" onerror="BootTerminal.assetFailure('Fiscal')"></script>
+    <script src="js/posFlow.js" onerror="BootTerminal.assetFailure('POS')"></script>
+    <script src="js/reports.js" onerror="BootTerminal.assetFailure('Reports')"></script>
+    <script src="js/router.js" onerror="BootTerminal.assetFailure('Router')"></script>
+    <script src="js/barcode.js" onerror="BootTerminal.assetFailure('Barcode')"></script>
+    <script src="js/app.js" onerror="BootTerminal.assetFailure('AppAPI / SystemAudit')"></script>
 </body>
 </html>

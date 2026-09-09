@@ -6,6 +6,8 @@ const DB = (() => {
     let dbNames = null
     let remotes = null
     let syncHandles = []
+    let initialized = false
+    let initPromise = null
 
     function cleanName(value) {
         return String(value || "sunmi")
@@ -32,29 +34,60 @@ const DB = (() => {
         })
     }
 
+    function withTimeout(promise, ms, message) {
+        return Promise.race([
+            promise,
+            new Promise((resolve, reject) => {
+                setTimeout(() => reject(new Error(message || "Timeout")), ms)
+            })
+        ])
+    }
+
     async function init() {
-        if (typeof PouchDB === "undefined") {
-            throw new Error("PouchDB non disponibile")
+        if (initialized) return
+        if (initPromise) return initPromise
+
+        initPromise = (async () => {
+            if (typeof PouchDB === "undefined") {
+                throw new Error("PouchDB non disponibile")
+            }
+
+            const prefix = cleanName(Config.salone || Config.piva || "sunmi")
+
+            dbNames = {
+                articoli: prefix + "-pos-articoli",
+                config: prefix + "-pos-config",
+                receipt: prefix + "-pos-receipt"
+            }
+
+            dbs = {
+                articoli: new PouchDB(dbNames.articoli),
+                config: new PouchDB(dbNames.config),
+                receipt: new PouchDB(dbNames.receipt)
+            }
+
+            configureRemotes()
+            await primeFromRemote()
+            await ensureSeed()
+            startLiveSync()
+            initialized = true
+        })()
+
+        try {
+            await initPromise
+        } catch (error) {
+            syncHandles.forEach(handle => {
+                if (handle && typeof handle.cancel === "function") handle.cancel()
+            })
+            syncHandles = []
+            dbs = null
+            dbNames = null
+            remotes = null
+            initialized = false
+            throw error
+        } finally {
+            initPromise = null
         }
-
-        const prefix = cleanName(Config.salone || Config.piva || "sunmi")
-
-        dbNames = {
-            articoli: prefix + "-pos-articoli",
-            config: prefix + "-pos-config",
-            receipt: prefix + "-pos-receipt"
-        }
-
-        dbs = {
-            articoli: new PouchDB(dbNames.articoli),
-            config: new PouchDB(dbNames.config),
-            receipt: new PouchDB(dbNames.receipt)
-        }
-
-        configureRemotes()
-        await primeFromRemote()
-        await ensureSeed()
-        startLiveSync()
     }
 
     function configureRemotes() {
@@ -156,6 +189,59 @@ const DB = (() => {
             if (docs.length) {
                 await dbs.articoli.bulkDocs(docs)
             }
+        }
+    }
+
+    async function audit() {
+        if (!dbs || !initialized) throw new Error("Database non inizializzato")
+
+        const id = "_local/audit-" + Date.now()
+        const value = "SOLX-AUDIT"
+
+        const put = await dbs.config.put({
+            _id: id,
+            value: value,
+            timestamp: new Date().toISOString()
+        })
+
+        if (!put || !put.ok) throw new Error("Scrittura audit fallita")
+
+        const read = await dbs.config.get(id)
+        if (!read || read.value !== value) throw new Error("Lettura audit fallita")
+
+        await dbs.config.remove(read)
+
+        const infos = await Promise.all([
+            dbs.articoli.info(),
+            dbs.config.info(),
+            dbs.receipt.info()
+        ])
+
+        return {
+            message:
+                "R/W OK - articoli=" + infos[0].doc_count +
+                " config=" + infos[1].doc_count +
+                " receipt=" + infos[2].doc_count
+        }
+    }
+
+    async function auditRemote() {
+        if (!Config.couchdbBaseUrl) {
+            return { warning: "non configurato" }
+        }
+
+        if (!remotes || !remotes.config) {
+            throw new Error("Remote CouchDB non inizializzato")
+        }
+
+        const info = await withTimeout(
+            remotes.config.info(),
+            3500,
+            "Timeout connessione CouchDB"
+        )
+
+        return {
+            message: "online - " + (info.db_name || dbNames.config)
         }
     }
 
@@ -274,6 +360,8 @@ const DB = (() => {
 
     return {
         init,
+        audit,
+        auditRemote,
         getConfig,
         saveConfig,
         getDeviceConfig,

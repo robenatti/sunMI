@@ -88,6 +88,27 @@ AppViews.riepilogo = (() => {
         })
     }
 
+    async function audit(root) {
+        const ids = [
+            "summaryDate",
+            "backToPos",
+            "cashChecks",
+            "sumTotal",
+            "sumCash",
+            "sumPos",
+            "sumServices",
+            "sumProducts",
+            "sumDocuments",
+            "receiptRows",
+            "receiptDetail"
+        ]
+
+        const missing = ids.filter(id => !root.querySelector("#" + id))
+        if (missing.length) throw new Error("Elementi DOM mancanti: " + missing.join(", "))
+
+        return { ok: true, elements: ids.length }
+    }
+
     async function mount() {
         document.getElementById("summaryDate").value = todayInput()
         document.getElementById("backToPos").addEventListener("click", () => Router.open("cassa"))
@@ -118,5 +139,5 @@ AppViews.riepilogo = (() => {
 
     function unmount() {}
 
-    return { mount, unmount }
+    return { mount, unmount, audit }
 })()

@@ -2,11 +2,6 @@
 // Generated on: 2026-05-09 (Europe/Rome)
 // inizio file interfaceKotlin.js
 
-// Funzioni esposte:
-// - Bridge.exec(action, payload, timeout): invia un comando al layer nativo Android/Kotlin.
-// - Bridge.onNativeResponse(response): riceve la risposta dal layer nativo.
-// - window.onNativeResponse(res): entry point globale richiamabile dal layer nativo.
-
 const Bridge = {
     callbacks: {},
     timeoutMs: 5000,
@@ -14,9 +9,7 @@ const Bridge = {
 
     exec(action, payload = {}, timeout = 5000) {
         return new Promise((resolve, reject) => {
-
             this.seq++
-
             const id = Date.now().toString() + "-" + this.seq.toString()
 
             const timer = setTimeout(() => {
@@ -46,8 +39,11 @@ const Bridge = {
                     error: e && e.message ? e.message : String(e)
                 })
             }
-
         })
+    },
+
+    auditHardware(timeout = 4000) {
+        return this.exec("hardware_status", {}, timeout)
     },
 
     onNativeResponse(response) {
@@ -60,7 +56,6 @@ const Bridge = {
         }
 
         const cb = this.callbacks[res.id]
-
         if (!cb) return
 
         clearTimeout(cb.timer)
@@ -80,22 +75,31 @@ window.onNativeResponse = function (res) {
 }
 
 if (typeof Android === "undefined") {
-
     window.Android = {
         exec: function (json) {
-
             const req = JSON.parse(json)
 
             setTimeout(() => {
-                window.onNativeResponse(JSON.stringify({
-                    id: req.id,
-                    success: true,
-                    data: {
+                const data = req.action === "hardware_status"
+                    ? {
+                        mock: true,
+                        androidBridge: false,
+                        printerService: false,
+                        printerDriver: false,
+                        manufacturer: "BROWSER",
+                        model: "MOCK"
+                    }
+                    : {
                         mock: true,
                         action: req.action
                     }
+
+                window.onNativeResponse(JSON.stringify({
+                    id: req.id,
+                    success: true,
+                    data: data
                 }))
-            }, 300)
+            }, 100)
         }
     }
 }

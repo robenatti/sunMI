@@ -1,0 +1,142 @@
+html,
+body {
+    background: #000;
+}
+
+.boot-screen {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    display: flex;
+    align-items: stretch;
+    justify-content: stretch;
+    background: #020602;
+    color: #56ff72;
+    font-family: "Courier New", monospace;
+}
+
+.boot-screen.hidden {
+    display: none;
+}
+
+.boot-screen::after {
+    content: "";
+    pointer-events: none;
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+        to bottom,
+        rgba(255, 255, 255, 0.018) 0,
+        rgba(255, 255, 255, 0.018) 1px,
+        rgba(0, 0, 0, 0.08) 2px,
+        rgba(0, 0, 0, 0.08) 4px
+    );
+}
+
+.boot-monitor {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    padding: 1.2rem 1.4rem;
+    overflow: auto;
+    text-shadow: 0 0 5px rgba(86, 255, 114, 0.55);
+}
+
+.boot-title {
+    font-size: 1.35rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+}
+
+.boot-separator {
+    margin: 0.35rem 0 0.8rem;
+    opacity: 0.8;
+    white-space: pre-wrap;
+}
+
+.boot-log {
+    font-size: 0.98rem;
+    line-height: 1.45;
+    white-space: pre-wrap;
+}
+
+.boot-line {
+    min-height: 1.35rem;
+}
+
+.boot-ok {
+    color: #74ff8b;
+}
+
+.boot-warn {
+    color: #e7ff68;
+    text-shadow: 0 0 5px rgba(231, 255, 104, 0.45);
+}
+
+.boot-fail {
+    color: #ff6969;
+    text-shadow: 0 0 5px rgba(255, 105, 105, 0.55);
+}
+
+.boot-info {
+    color: #66d97a;
+}
+
+.boot-summary {
+    margin-top: 0.9rem;
+    font-weight: 700;
+    white-space: pre-wrap;
+}
+
+.boot-actions {
+    display: none;
+    gap: 0.7rem;
+    margin-top: 1rem;
+}
+
+.boot-actions.show {
+    display: flex;
+}
+
+.boot-button {
+    min-width: 8rem;
+    min-height: 2.6rem;
+    padding: 0 1rem;
+    border: 1px solid #56ff72;
+    background: #001500;
+    color: #56ff72;
+    font-family: inherit;
+    font-weight: 700;
+}
+
+.boot-button:active {
+    background: #063006;
+}
+
+.boot-technical {
+    display: none;
+    margin: 1rem 0 0;
+    padding: 0.7rem;
+    border: 1px solid #194d21;
+    background: #000;
+    color: #9be9a8;
+    font-size: 0.78rem;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.boot-technical.show {
+    display: block;
+}
+
+.boot-cursor {
+    margin-top: 0.5rem;
+    animation: bootBlink 0.85s steps(1) infinite;
+}
+
+@keyframes bootBlink {
+    50% {
+        opacity: 0;
+    }
+}

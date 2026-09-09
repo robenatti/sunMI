@@ -207,6 +207,33 @@ AppViews.config = (() => {
         })
     }
 
+    async function audit(root) {
+        const ids = [
+            "backToPos",
+            "runAudit",
+            "configArticleSearch",
+            "newArticle",
+            "configArticleList",
+            "articleForm",
+            "articleName",
+            "articleType",
+            "articlePrice",
+            "articleDepartment",
+            "articlePosition",
+            "departmentRows",
+            "saveDepartments",
+            "currentCash",
+            "cashRows",
+            "addCash",
+            "saveCashes"
+        ]
+
+        const missing = ids.filter(id => !root.querySelector("#" + id))
+        if (missing.length) throw new Error("Elementi DOM mancanti: " + missing.join(", "))
+
+        return { ok: true, elements: ids.length }
+    }
+
     async function mount() {
         configData = await AppAPI.getConfig()
         bindTabs()
@@ -217,6 +244,7 @@ AppViews.config = (() => {
         newArticle()
 
         document.getElementById("backToPos").addEventListener("click", () => Router.open("cassa"))
+        document.getElementById("runAudit").addEventListener("click", () => SystemAudit.run())
         document.getElementById("newArticle").addEventListener("click", newArticle)
         document.getElementById("configArticleSearch").addEventListener("input", event => renderArticleList(event.target.value))
         document.getElementById("articleForm").addEventListener("submit", saveArticle)
@@ -227,5 +255,5 @@ AppViews.config = (() => {
 
     function unmount() {}
 
-    return { mount, unmount }
+    return { mount, unmount, audit }
 })()

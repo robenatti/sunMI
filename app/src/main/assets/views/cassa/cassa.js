@@ -285,6 +285,32 @@ AppViews.cassa = (() => {
         document.getElementById("openSummary").addEventListener("click", () => Router.open("riepilogo"))
     }
 
+    async function audit(root) {
+        const ids = [
+            "reparti",
+            "articoliBottoni",
+            "articoliListaPanel",
+            "articleSearch",
+            "articoliLista",
+            "carrello",
+            "articleCount",
+            "totalValue",
+            "selectedPrice",
+            "keypad",
+            "openConfig",
+            "openSummary",
+            "cancelSale",
+            "cashPayment",
+            "cardPayment",
+            "progressPopup"
+        ]
+
+        const missing = ids.filter(id => !root.querySelector("#" + id))
+        if (missing.length) throw new Error("Elementi DOM mancanti: " + missing.join(", "))
+
+        return { ok: true, elements: ids.length }
+    }
+
     async function mount() {
         renderReparti()
         renderCart()
@@ -313,5 +339,5 @@ AppViews.cassa = (() => {
         unsubscribers = []
     }
 
-    return { mount, unmount }
+    return { mount, unmount, audit }
 })()
