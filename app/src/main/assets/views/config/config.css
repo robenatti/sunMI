@@ -1,0 +1,147 @@
+.config-page {
+    display: grid;
+    grid-template-rows: auto 4rem 1fr;
+}
+
+.config-header {
+    grid-template-columns: 9rem 1fr 9rem;
+}
+
+.config-tabs {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+}
+
+.config-tab.active {
+    border-color: #4da3ff;
+    background: #2c3342;
+}
+
+.config-panel {
+    display: none;
+    min-height: 0;
+}
+
+.config-panel.active {
+    display: grid;
+}
+
+#articlesPanel {
+    grid-template-columns: 1.2fr 1fr;
+    gap: 0.7rem;
+}
+
+.article-browser,
+.article-form,
+.department-editor,
+.cash-editor {
+    min-height: 0;
+    background: #12141a;
+    border: 1px solid #2a2f38;
+    border-radius: 0.6rem;
+    padding: 0.8rem;
+    box-sizing: border-box;
+}
+
+.article-browser {
+    display: grid;
+    grid-template-rows: 3.4rem 1fr;
+    gap: 0.5rem;
+}
+
+.article-browser-head {
+    display: grid;
+    grid-template-columns: 1fr 8rem;
+    gap: 0.5rem;
+}
+
+.config-article-list {
+    overflow-y: auto;
+    min-height: 0;
+}
+
+.config-article-row {
+    width: 100%;
+    min-height: 3.2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #181b21;
+    color: inherit;
+    border: 0;
+    border-bottom: 1px solid #2a2f38;
+    padding: 0 0.7rem;
+}
+
+.config-article-row span:last-child {
+    opacity: 0.6;
+}
+
+.article-form {
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.article-form label,
+.cash-editor label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    font-size: 0.8rem;
+    opacity: 0.9;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.6rem;
+}
+
+.check-line {
+    flex-direction: row !important;
+    align-items: center;
+}
+
+.save-button {
+    min-height: 3.5rem;
+    background: #1f4d36;
+}
+
+.department-editor,
+.cash-editor {
+    width: min(900px, 100%);
+    margin: 0 auto;
+    overflow-y: auto;
+}
+
+.department-head,
+.department-row {
+    display: grid;
+    grid-template-columns: 6rem 1fr 12rem;
+    gap: 0.6rem;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.department-head {
+    opacity: 0.6;
+    font-size: 0.8rem;
+}
+
+.cash-row {
+    display: grid;
+    grid-template-columns: 6rem 1fr;
+    gap: 0.6rem;
+    align-items: center;
+    margin: 0.5rem 0;
+}
+
+.cash-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.6rem;
+    margin-top: 1rem;
+}

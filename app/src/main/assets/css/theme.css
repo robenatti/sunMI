@@ -1,174 +1,73 @@
-/* Copyright AltraConsulenza Snc */
-/* Generated on: 2026-05-09 (Europe/Rome) */
-/* inizio file theme.css */
-
 body {
     background: #0f1115;
     color: #e6e6e6;
-    font-family: system-ui, -apple-system, sans-serif;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
-/* BUTTON BASE */
+button,
+input,
+select {
+    font: inherit;
+}
+
+input,
+select {
+    min-height: 2.8rem;
+    padding: 0 0.65rem;
+    box-sizing: border-box;
+    border: 1px solid #343a45;
+    border-radius: 0.45rem;
+    background: #0d0f13;
+    color: #e6e6e6;
+}
+
 .btn {
+    width: 100%;
+    height: 100%;
+    min-height: 2.8rem;
     background: #1a1d23;
     border: 1px solid #2a2f38;
     border-radius: 0.6rem;
     color: #e6e6e6;
-    transition: transform 0.08s ease, background 0.1s ease;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
 }
 
 .btn:active {
-    transform: scale(0.96);
+    transform: scale(0.98);
     background: #2a2f38;
 }
 
-/* REPARTI */
-.reparto {
-    background: #232733;
-    font-weight: 600;
-}
-
-.reparto.active {
-    border: 2px solid #4da3ff;
-    background: #2c3342;
-}
-
-/* SERVIZI */
-.servizio {
-    background: #1a1d23;
-}
-
-.s-name {
-    font-size: 0.8rem;
-    opacity: 0.8;
-}
-
-.s-price {
-    font-size: 1.2rem;
-    font-weight: 700;
-}
-
-/* HEADER */
-.label {
-    font-size: 1rem;
-    opacity: 0.6;
-    align-self: flex-start;
-}
-
-.value {
-    font-size: 1.8rem;
-    font-weight: 700;
-    align-self: flex-end;
+.btn:disabled {
+    opacity: 0.35;
 }
 
 .box {
     background: #000;
     border: 1px solid #2a2f38;
     border-radius: 0.5rem;
-    padding: 0.3rem;
-
+    padding: 0.45rem 0.6rem;
     display: flex;
     flex-direction: column;
     justify-content: center;
-    align-items: flex-start;
-    gap: 0.2rem;
 }
 
-/* LISTA */
-.lista {
-    background: #12141a;
-    border: 1px solid #2a2f38;
-    border-radius: 0.5rem;
+.label {
+    font-size: 0.8rem;
+    opacity: 0.6;
 }
 
-
-.lista::-webkit-scrollbar {
-    width: 0.9rem;
-}
-
-.lista::-webkit-scrollbar-track {
-    background: #0b0d11;
-    border-radius: 999rem;
-}
-
-.lista::-webkit-scrollbar-thumb {
-    background: #3a4352;
-    border-radius: 999rem;
-}
-
-.lista::-webkit-scrollbar-thumb:hover {
-    background: #4d5a6d;
-}
-
-.row {
-    border-bottom: 1px solid #1f232b;
-    font-size: 1rem;
-    cursor: pointer;
-}
-
-.row.selected {
-    background: #243044;
-    border: 1px solid #4da3ff;
-    border-radius: 0.35rem;
-}
-
-
-/* SELECTED BAR */
-.selected-display {
-    background: #06140b;
-    border: 1px solid #1f5f36;
-    border-radius: 0.5rem;
-    color: #5dff8b;
-    box-shadow: inset 0 0 8px rgba(93, 255, 139, 0.12);
-}
-
-.selected-price {
-    font-size: 1.25rem;
+.value {
+    font-size: 1.6rem;
     font-weight: 700;
-    text-align: right;
-    letter-spacing: 0.04em;
 }
 
+.action.annulla,
 .selected-delete {
     background: #3a1f1f;
-    font-size: 0.9rem;
-    font-weight: 700;
 }
 
 .selected-discount {
     background: #3a321f;
-    font-size: 0.9rem;
-    font-weight: 700;
-}
-
-/* DISPLAY */
-.display {
-    background: #000;
-    border: 1px solid #2a2f38;
-    border-radius: 0.5rem;
-    font-size: 1.8rem;
-    font-weight: bold;
-    visibility: hidden;
-}
-
-/* KEYPAD */
-.key.ok {
-    font-weight: bold;
-}
-
-/* FOOTER ACTIONS */
-.action {
-    font-weight: 600;
-    letter-spacing: 0.03em;
-}
-
-.action.annulla {
-    background: #3a1f1f;
-}
-
-.action.altro {
-    background: #2a2f38;
 }
 
 .action.contanti {
@@ -179,150 +78,25 @@ body {
     background: #1f3f66;
 }
 
-/* POPUP PAGAMENTO */
-
-.popup {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.7);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
+.page-header {
+    min-height: 3.5rem;
 }
 
-.popup.show {
-    display: flex;
+.back-button {
+    min-height: 3.5rem;
 }
 
-.popup-box {
-    background: #111;
-    border: 1px solid #2a2f38;
+.section-label {
+    font-size: 0.8rem;
+    opacity: 0.6;
+    font-weight: 700;
+}
+
+.app-error {
+    background: #2a1111;
+    border: 2px solid #8c3333;
     border-radius: 0.8rem;
-    padding: 1.5rem;
-    width: 380px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
-}
-
-.popup-title {
-    font-size: 1.2rem;
-    font-weight: 700;
-    margin-bottom: 1rem;
-    text-align: center;
-}
-
-.popup-body {
-    display: flex;
-    flex-direction: column;
-    gap: 0.6rem;
-    margin-bottom: 1.2rem;
-}
-
-.popup-row {
-    display: flex;
-    justify-content: space-between;
-    font-size: 1rem;
-}
-
-.popup-row span:last-child {
-    font-weight: 700;
-}
-
-.popup-actions {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0.6rem;
-    margin-top: 1rem;
-}
-
-.popup-actions .btn {
-    height: 4.5rem;
+    color: #ffd0d0;
     font-size: 1.1rem;
-    font-weight: 700;
-    border-radius: 0.7rem;
-}
-
-.popup-ok {
-    background: #2a6f4f;
-}
-
-.popup-cancel {
-    background: #6f2a2a;
-}
-
-#popupImporto {
-    font-size: 1.4rem;
-}
-
-/* POPUP AVANZAMENTO */
-
-.progress-popup {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.72);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    z-index: 1100;
-}
-
-.progress-popup.show {
-    display: flex;
-}
-
-.progress-box {
-    width: 420px;
-    background: #111;
-    border: 1px solid #2a2f38;
-    border-radius: 0.8rem;
-    padding: 1.5rem;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.65);
-}
-
-.progress-title {
-    font-size: 1.2rem;
-    font-weight: 700;
     text-align: center;
-    margin-bottom: 1rem;
 }
-
-.progress-message {
-    min-height: 2rem;
-    font-size: 1rem;
-    text-align: center;
-    margin-bottom: 1rem;
-    color: #e6e6e6;
-}
-
-.progress-bar {
-    width: 100%;
-    height: 1.1rem;
-    background: #050505;
-    border: 1px solid #2a2f38;
-    border-radius: 999rem;
-    overflow: hidden;
-}
-
-.progress-fill {
-    width: 0%;
-    height: 100%;
-    background: #2a6f4f;
-    transition: width 0.25s linear;
-}
-
-.progress-percent {
-    margin-top: 0.7rem;
-    text-align: center;
-    font-size: 1rem;
-    font-weight: 700;
-}
-
-.progress-popup.error .progress-fill {
-    background: #6f2a2a;
-}
-
-.progress-popup.error .progress-message {
-    color: #ffb3b3;
-}
-
-/* fine file theme.css */

@@ -1,0 +1,63 @@
+<div class="pos-app">
+    <div class="left">
+        <div class="reparti" id="reparti"></div>
+
+        <div class="article-area">
+            <div class="articoli-bottoni" id="articoliBottoni"></div>
+
+            <div class="articoli-lista-panel" id="articoliListaPanel">
+                <input id="articleSearch" class="article-search" type="search" placeholder="Cerca articolo..." autocomplete="off">
+                <div id="articoliLista" class="articoli-lista"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="right">
+        <div class="lista" id="carrello"></div>
+
+        <div class="summary">
+            <div class="box articoli">
+                <span class="label">ARTICOLI</span>
+                <span class="value" id="articleCount">0</span>
+            </div>
+            <div class="box totale">
+                <span class="label">TOTALE</span>
+                <span class="value" id="totalValue">0,00 €</span>
+            </div>
+        </div>
+
+        <div class="selected-bar">
+            <div class="selected-display">
+                <div class="selected-price" id="selectedPrice">0,00 €</div>
+            </div>
+            <button class="btn selected-delete" id="deleteItem">ELIMINA</button>
+            <button class="btn selected-discount" id="discountItem">SCONTO</button>
+        </div>
+
+        <div class="keypad" id="keypad">
+            <button class="btn key">7</button><button class="btn key">8</button><button class="btn key">9</button><button class="btn key">←</button>
+            <button class="btn key">4</button><button class="btn key">5</button><button class="btn key">6</button><button class="btn key">CL</button>
+            <button class="btn key">1</button><button class="btn key">2</button><button class="btn key">3</button><button class="btn key">X</button>
+            <button class="btn key">%</button><button class="btn key">0</button><button class="btn key">,</button><button class="btn key ok">OK</button>
+        </div>
+    </div>
+
+    <div class="footer">
+        <div class="footer-tools">
+            <button class="btn action tool" id="openConfig" title="Configurazione">⚙</button>
+            <button class="btn action tool" id="openSummary" title="Riepilogo">☷</button>
+        </div>
+        <button class="btn action annulla" id="cancelSale">ANNULLA</button>
+        <button class="btn action contanti" id="cashPayment">CONTANTI</button>
+        <button class="btn action pos" id="cardPayment">POS</button>
+    </div>
+</div>
+
+<div class="progress-popup" id="progressPopup">
+    <div class="progress-box">
+        <div class="progress-title">OPERAZIONE IN CORSO</div>
+        <div class="progress-message" id="progressMessage">Preparazione operazione...</div>
+        <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+        <div class="progress-percent" id="progressPercent">0%</div>
+    </div>
+</div>

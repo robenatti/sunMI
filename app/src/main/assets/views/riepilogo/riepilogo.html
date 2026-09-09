@@ -1,0 +1,33 @@
+<div class="page summary-page">
+    <header class="page-header">
+        <button class="btn back-button" id="backToPos">← CASSA</button>
+        <h1>RIEPILOGO GIORNATA</h1>
+        <input id="summaryDate" type="date">
+    </header>
+
+    <section class="cash-filter">
+        <span class="section-label">CASSE</span>
+        <div id="cashChecks" class="cash-checks"></div>
+    </section>
+
+    <section class="summary-cards">
+        <div class="summary-card"><span>TOTALE</span><strong id="sumTotal">0,00 €</strong></div>
+        <div class="summary-card"><span>CONTANTI</span><strong id="sumCash">0,00 €</strong></div>
+        <div class="summary-card"><span>POS</span><strong id="sumPos">0,00 €</strong></div>
+        <div class="summary-card"><span>SERVIZI</span><strong id="sumServices">0,00 €</strong></div>
+        <div class="summary-card"><span>PRODOTTI</span><strong id="sumProducts">0,00 €</strong></div>
+        <div class="summary-card"><span>DOCUMENTI</span><strong id="sumDocuments">0</strong></div>
+    </section>
+
+    <section class="receipt-area">
+        <div class="receipt-list-wrap">
+            <table class="receipt-table">
+                <thead><tr><th>ORA</th><th>CASSA</th><th>MP</th><th>TOTALE</th></tr></thead>
+                <tbody id="receiptRows"></tbody>
+            </table>
+        </div>
+        <div id="receiptDetail" class="receipt-detail">
+            <div class="empty-detail">Seleziona una ricevuta</div>
+        </div>
+    </section>
+</div>

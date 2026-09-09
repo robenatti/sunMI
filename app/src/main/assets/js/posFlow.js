@@ -1,505 +1,281 @@
 // Copyright AltraConsulenza Snc
-// Generated on: 2026-05-09 (Europe/Rome)
-// inizio file posFlow.js
+// Motore POS. Nessuna dipendenza dalla UI.
 
-// Funzioni esposte:
-// - emitPosEvent(name, detail): emette un evento applicativo POS verso la UI o altri listener.
-// - logStep(step, data): registra un passaggio logico emettendo evento pos:log.
-// - waitForUIPaint(): attende un piccolo tempo per permettere alla UI di disegnare popup/barra.
-// - requestPaymentConfirm(tipo, receipt): richiede conferma pagamento tramite evento asincrono.
-// - recalcTotal(): ricalcola il totale carrello.
-// - addService(nome, prezzo): aggiunge un servizio al carrello POS.
-// - addDiscount(nome, importo): aggiunge una riga sconto negativa al carrello.
-// - updateItemPrice(index, prezzo): modifica il prezzo di una riga carrello.
-// - removeItem(index): elimina una riga carrello.
-// - duplicateItem(index, count): replica una riga carrello fino alla quantità richiesta.
-// - reset(): svuota il carrello POS.
-// - startPayment(tipo): avvia il flusso completo di pagamento, fiscalizzazione e stampa.
-// - buildFiche(): costruisce la fiche interna partendo dal carrello.
-// - createReceiptFromFiche(fiche, tipo): costruisce la ricevuta logica dalla fiche.
-// - buildPayment(tipo): costruisce l'oggetto pagamento.
-// - simulatePOSPayment(receipt): esegue simulazione pagamento POS tramite evento.
-// - fiscalizeIT(receipt): invia la ricevuta al servizio fiscale italiano.
-// - fiscalizeAL(receipt): invia la ricevuta al servizio fiscale albanese.
+const POS = (() => {
+    let items = []
+    let total = 0
+    let listeners = new Map()
+    let prepared = false
+    let paymentRunning = false
 
-function emitPosEvent(name, detail) {
-    document.dispatchEvent(new CustomEvent(name, {
-        detail: detail || {}
-    }))
-}
-
-function logStep(step, data) {
-    if (Config.debugLog !== true) return
-
-    emitPosEvent("pos:log", {
-        step: step,
-        data: data || null,
-        timestamp: new Date().toISOString()
-    })
-}
-
-function waitForUIPaint() {
-    return new Promise((resolve) => {
-        setTimeout(resolve, 200)
-    })
-}
-
-function requestPaymentConfirm(tipo, receipt) {
-
-    return new Promise((resolve) => {
-
-        emitPosEvent("pos:payment:confirm-request", {
-            tipo: tipo,
-            receipt: receipt,
-            resolve: resolve
-        })
-
-    })
-}
-
-function recalcTotal() {
-    window.items = window.items || []
-
-    window.total = window.items.reduce((sum, i) => {
-        return sum + Number(i.prezzo || 0)
-    }, 0)
-
-    return window.total
-}
-
-function addService(nome, prezzo) {
-
-    const service = {
-        nome: nome,
-        prezzo: Number(prezzo || 0)
+    function clone(value) {
+        return JSON.parse(JSON.stringify(value))
     }
 
-    window.items = window.items || []
-    window.items.push(service)
-
-    if (window.items.length === 1) {
-        prepareFiscalIT()
+    function roundMoney(value) {
+        return Math.round(Number(value || 0) * 100) / 100
     }
 
-    recalcTotal()
+    function on(eventName, callback) {
+        if (!listeners.has(eventName)) listeners.set(eventName, new Set())
+        listeners.get(eventName).add(callback)
 
-    emitPosEvent("pos:item:add", {
-        service: service,
-        index: window.items.length - 1,
-        items: window.items,
-        total: window.total
-    })
-
-    document.dispatchEvent(new Event("pos:update"))
-}
-
-function addDiscount(nome, importo) {
-
-    const value = Math.abs(Number(importo || 0))
-
-    if (value <= 0) {
-        return
+        return () => {
+            const set = listeners.get(eventName)
+            if (set) set.delete(callback)
+        }
     }
 
-    const service = {
-        nome: nome || "SCONTO",
-        prezzo: -value
-    }
+    function emit(eventName, detail) {
+        const set = listeners.get(eventName)
+        if (!set) return
 
-    window.items = window.items || []
-    window.items.push(service)
-
-    recalcTotal()
-
-    emitPosEvent("pos:item:add", {
-        service: service,
-        index: window.items.length - 1,
-        items: window.items,
-        total: window.total
-    })
-
-    document.dispatchEvent(new Event("pos:update"))
-}
-
-function updateItemPrice(index, prezzo) {
-    window.items = window.items || []
-
-    const idx = Number(index)
-
-    if (idx < 0 || idx >= window.items.length) {
-        return
-    }
-
-    window.items[idx].prezzo = Number(prezzo || 0)
-
-    recalcTotal()
-
-    emitPosEvent("pos:item:update", {
-        index: idx,
-        item: window.items[idx],
-        items: window.items,
-        total: window.total
-    })
-
-    document.dispatchEvent(new Event("pos:update"))
-}
-
-function removeItem(index) {
-    window.items = window.items || []
-
-    const idx = Number(index)
-
-    if (idx < 0 || idx >= window.items.length) {
-        return
-    }
-
-    const removed = window.items.splice(idx, 1)[0]
-
-    recalcTotal()
-
-    emitPosEvent("pos:item:remove", {
-        index: idx,
-        removed: removed,
-        items: window.items,
-        total: window.total
-    })
-
-    document.dispatchEvent(new Event("pos:update"))
-}
-
-function duplicateItem(index, count) {
-    window.items = window.items || []
-
-    const idx = Number(index)
-    const qty = Number(count || 0)
-
-    if (idx < 0 || idx >= window.items.length) {
-        return
-    }
-
-    if (qty <= 1) {
-        return
-    }
-
-    const base = window.items[idx]
-
-    for (let i = 1; i < qty; i++) {
-        window.items.push({
-            nome: base.nome,
-            prezzo: Number(base.prezzo || 0)
-        })
-    }
-
-    recalcTotal()
-
-    emitPosEvent("pos:item:duplicate", {
-        index: idx,
-        item: base,
-        count: qty,
-        items: window.items,
-        total: window.total
-    })
-
-    document.dispatchEvent(new Event("pos:update"))
-}
-
-function reset() {
-    window.items = []
-    window.total = 0
-
-    emitPosEvent("pos:reset", {
-        items: window.items,
-        total: window.total
-    })
-
-    document.dispatchEvent(new Event("pos:update"))
-}
-
-async function startPayment(tipo) {
-
-    if (!window.items || window.items.length === 0) {
-        emitPosEvent("pos:payment:empty", {
-            tipo: tipo
-        })
-        return
-    }
-
-    logStep("START", {
-        tipo: tipo,
-        total: window.total,
-        items: window.items
-    })
-
-    emitPosEvent("pos:payment:start", {
-        tipo: tipo,
-        total: window.total,
-        items: window.items,
-        timeout: Config.progressMaxMs || 10000
-    })
-
-    await waitForUIPaint()
-
-    try {
-
-        let fiche = buildFiche()
-
-        logStep("FICHE", fiche)
-
-        emitPosEvent("pos:payment:fiche-built", {
-            tipo: tipo,
-            fiche: fiche
-        })
-
-        let receipt = createReceiptFromFiche(fiche, tipo)
-
-        logStep("RECEIPT", receipt)
-
-        emitPosEvent("pos:payment:receipt-built", {
-            tipo: tipo,
-            receipt: receipt
-        })
-
-        let paymentOk = true
-
-        if (0) {
-            if (tipo === "CA") {
-                paymentOk = await requestPaymentConfirm(tipo, receipt)
-            } else {
-                paymentOk = await simulatePOSPayment(receipt)
+        set.forEach(callback => {
+            try {
+                callback(clone(detail || {}))
+            } catch (e) {
+                console.error(e)
             }
+        })
+    }
+
+    function recalc() {
+        total = roundMoney(items.reduce((sum, item) => sum + Number(item.prezzo || 0), 0))
+        emit("change", getState())
+    }
+
+    function getState() {
+        return {
+            items: clone(items),
+            total: total,
+            paymentRunning: paymentRunning
+        }
+    }
+
+    function addArticle(article, overridePrice) {
+        if (!article || paymentRunning) return
+
+        const prezzo = overridePrice == null
+            ? Number(article.prezzo || 0)
+            : Number(overridePrice || 0)
+
+        const row = {
+            nome: article.nome,
+            prezzo: roundMoney(prezzo),
+            prezzobase: roundMoney(article.prezzo || 0),
+            tipo: article.tipo === "P" ? "P" : "S"
         }
 
-        if (!paymentOk) {
-            logStep("PAYMENT CANCELLED")
+        if (row.tipo === "P") {
+            row.idp = article._id
+            row.pezzi = 1
+        }
 
-            emitPosEvent("pos:payment:cancelled", {
-                tipo: tipo,
-                receipt: receipt
+        items.push(row)
+
+        if (items.length === 1 && !prepared) {
+            prepared = true
+            Fiscal.prepareIT().catch(() => {})
+        }
+
+        recalc()
+    }
+
+    function removeItem(index) {
+        if (paymentRunning) return
+        const idx = Number(index)
+        if (idx < 0 || idx >= items.length) return
+        items.splice(idx, 1)
+        recalc()
+    }
+
+    function setPrice(index, price) {
+        if (paymentRunning) return
+        const idx = Number(index)
+        if (idx < 0 || idx >= items.length) return
+        items[idx].prezzo = roundMoney(price)
+        recalc()
+    }
+
+    function duplicateItem(index, count) {
+        if (paymentRunning) return
+        const idx = Number(index)
+        const qty = Math.floor(Number(count || 0))
+
+        if (idx < 0 || idx >= items.length || qty <= 1) return
+
+        const base = items[idx]
+
+        for (let i = 1; i < qty; i++) {
+            const copy = clone(base)
+            if (copy.tipo === "P") copy.pezzi = 1
+            items.push(copy)
+        }
+
+        recalc()
+    }
+
+    function addDiscount(value, percentMode) {
+        if (paymentRunning) return
+        const entered = Math.abs(Number(value || 0))
+        if (entered <= 0) return
+
+        const amount = percentMode
+            ? roundMoney(total * entered / 100)
+            : roundMoney(entered)
+
+        if (amount <= 0) return
+
+        items.push({
+            nome: percentMode
+                ? "SCONTO " + String(entered).replace(".", ",") + "%"
+                : "SCONTO",
+            prezzo: -amount,
+            prezzobase: -amount,
+            tipo: "S",
+            sconto: true
+        })
+
+        recalc()
+    }
+
+    function reset() {
+        items = []
+        total = 0
+        prepared = false
+        paymentRunning = false
+        emit("change", getState())
+        emit("reset", {})
+    }
+
+    function localDateParts(date) {
+        const yyyy = String(date.getFullYear())
+        const mm = String(date.getMonth() + 1).padStart(2, "0")
+        const dd = String(date.getDate()).padStart(2, "0")
+        const hh = String(date.getHours()).padStart(2, "0")
+        const mi = String(date.getMinutes()).padStart(2, "0")
+        const ss = String(date.getSeconds()).padStart(2, "0")
+
+        return {
+            anno: yyyy,
+            mese: yyyy + mm,
+            giorno: yyyy + mm + dd,
+            data: dd + "/" + mm + "/" + yyyy,
+            ora: hh + ":" + mi,
+            idPrefix: yyyy + mm + dd + hh + mi + ss + "00"
+        }
+    }
+
+    async function buildReceipt(tipo) {
+        const now = new Date()
+        const parts = localDateParts(now)
+        const device = await DB.getDeviceConfig()
+        const superConnect = Number(device.superConnect || 1)
+        const numero = await DB.nextReceiptNumber(superConnect)
+        const righe = clone(items)
+
+        const totServizi = roundMoney(righe
+            .filter(r => r.tipo === "S" && !r.sconto)
+            .reduce((sum, r) => sum + Number(r.prezzo || 0), 0))
+
+        const totProdotti = roundMoney(righe
+            .filter(r => r.tipo === "P")
+            .reduce((sum, r) => sum + Number(r.prezzo || 0), 0))
+
+        const totSconto = roundMoney(righe
+            .filter(r => r.sconto || Number(r.prezzo || 0) < 0)
+            .reduce((sum, r) => sum + Math.abs(Number(r.prezzo || 0)), 0))
+
+        return {
+            _id: parts.idPrefix + "-" + String(superConnect) + "-" + String(numero).padStart(4, "0"),
+            documento: "Ricevuta",
+            data: parts.data,
+            numero: numero,
+            mp: tipo,
+            timestamp: now.toISOString(),
+            ora: parts.ora,
+            anno: parts.anno,
+            mese: parts.mese,
+            giorno: parts.giorno,
+            righe: righe,
+            righeL: righe.length,
+            totSconto: totSconto,
+            totale: roundMoney(total),
+            totServizi: totServizi,
+            totProdotti: totProdotti,
+            superConnect: superConnect
+        }
+    }
+
+    async function pay(tipo) {
+        if (!items.length) {
+            emit("payment:empty", {})
+            return null
+        }
+
+        if (paymentRunning) return null
+
+        paymentRunning = true
+        emit("change", getState())
+        emit("payment:start", { tipo: tipo, total: total })
+
+        try {
+            const receipt = await buildReceipt(tipo)
+
+            emit("fiscal:start", { receipt: receipt })
+            const fiscal = await Fiscal.fiscalizeIT(receipt)
+            receipt.fiscal = fiscal
+            receipt.rCode = fiscal.numero || ""
+            emit("fiscal:end", { receipt: receipt })
+
+            await DB.saveReceipt(receipt)
+            emit("receipt:saved", { receipt: receipt })
+
+            const printData = renderReceiptIT(Object.assign({}, receipt, {
+                data: receipt.data,
+                ora: receipt.ora
+            }))
+
+            let printError = null
+
+            try {
+                emit("print:start", { receipt: receipt })
+                await Bridge.exec("print", printData, Config.printTimeoutMs || 60000)
+                emit("print:end", { receipt: receipt })
+            } catch (error) {
+                printError = error
+                emit("print:error", {
+                    receipt: receipt,
+                    message: error && error.message ? error.message : String(error)
+                })
+            }
+
+            emit("payment:end", {
+                receipt: receipt,
+                printError: !!printError
             })
 
-            return
+            reset()
+            return receipt
+        } catch (error) {
+            paymentRunning = false
+            emit("change", getState())
+            emit("error", {
+                message: error && error.message ? error.message : String(error)
+            })
+            throw error
         }
-
-        receipt.pagamento = buildPayment(tipo)
-
-        logStep("PAYMENT OK", receipt.pagamento)
-
-        emitPosEvent("pos:payment:ok", {
-            tipo: tipo,
-            receipt: receipt,
-            pagamento: receipt.pagamento
-        })
-
-        emitPosEvent("pos:fiscal:start", {
-            tipo: tipo,
-            receipt: receipt
-        })
-
-        const fiscal = await fiscalizeIT(receipt)
-        //const fiscal = await fiscalizeAL(receipt)
-
-        receipt.fiscal = fiscal
-
-        logStep("FISCAL", fiscal)
-
-        emitPosEvent("pos:fiscal:end", {
-            tipo: tipo,
-            receipt: receipt,
-            fiscal: fiscal
-        })
-
-        const printData = renderReceiptIT({
-        //const printData = renderReceiptAL({
-            ...receipt,
-            data: new Date().toLocaleDateString(),
-            ora: new Date().toLocaleTimeString().slice(0, 5)
-        })
-
-        logStep("PRINT", printData)
-
-        emitPosEvent("pos:print:start", {
-            tipo: tipo,
-            receipt: receipt,
-            printData: printData,
-            timeout: Config.progressMaxMs || 10000
-        })
-
-        await waitForUIPaint()
-
-        await Bridge.exec("print", printData, Config.printTimeoutMs || 60000)
-
-        emitPosEvent("pos:print:end", {
-            tipo: tipo,
-            receipt: receipt,
-            printData: printData
-        })
-
-        logStep("DONE")
-
-        emitPosEvent("pos:payment:end", {
-            tipo: tipo,
-            receipt: receipt
-        })
-
-        reset()
-
-    } catch (err) {
-
-        logStep("ERROR", err)
-        logStep("ERROR STRING", err && err.message ? err.message : "")
-        logStep("ERROR FULL", err)
-
-        emitPosEvent("pos:error", {
-            tipo: tipo,
-            error: err,
-            message: err && err.message ? err.message : String(err)
-        })
     }
-}
-
-// ===== BUILD FICHE =====
-function buildFiche() {
-    return {
-        _id: "F-" + Date.now(),
-        righe: window.items,
-        totale: window.total,
-        timestamp: new Date().toISOString()
-    }
-}
-
-// ===== CREATE RECEIPT =====
-function createReceiptFromFiche(fiche, tipo) {
-
-    const now = new Date()
 
     return {
-        _id: "R-" + Date.now(),
-        ficheID: fiche._id,
-        documento: "Ricevuta",
-        data: now.toLocaleDateString(),
-        ora: now.toLocaleTimeString().slice(0, 5),
-        righe: window.items,
-        totale: window.total,
-        mp: tipo
+        on,
+        getState,
+        addArticle,
+        removeItem,
+        setPrice,
+        duplicateItem,
+        addDiscount,
+        reset,
+        pay
     }
-}
-
-// ===== PAYMENT =====
-function buildPayment(tipo) {
-    return {
-        tipo: tipo === "CC" ? "POS" : "CONTANTI",
-        esito: "OK",
-        timestamp: new Date().toISOString()
-    }
-}
-
-// ===== POS SIMULATION =====
-async function simulatePOSPayment(receipt) {
-
-    logStep("POS SIM START", receipt)
-
-    const ok = await requestPaymentConfirm("CC", receipt)
-
-    if (ok) logStep("POS SIM OK")
-    else logStep("POS SIM CANCEL")
-
-    return ok
-}
-
-// ===== FISCAL =====
-
-async function prepareFiscalIT() {
-    //return;
-    const idc = Config.intestazione?.userScade || Config.userScade || "250aa4c6210a214913c283e65f00489f"
-    const url = "http://trbl.it:7811/scAdE"
-
-    try {
-        logStep("FISCAL PREPARE START", {
-            idc: idc
-        })
-
-        const paramS =
-            "action=prepare&idc=" +
-            encodeURIComponent(idc)
-
-        const res = await fetch(url + "?" + paramS)
-        const json = await res.json()
-
-        logStep("FISCAL PREPARE RESPONSE", json)
-
-        if (
-            json.result !== "OK" ||
-            !json.return ||
-            json.return.done === "KO"
-        ) {
-            scAdEPrepared = false
-        }
-
-    } catch (err) {
-        scAdEPrepared = false
-        logStep("FISCAL PREPARE ERROR", err)
-    }
-}
-
-async function fiscalizeIT(receipt) {
-
-    const idc = Config.intestazione?.userScade || Config.userScade || "250aa4c6210a214913c283e65f00489f"
-    const url = "http://trbl.it:7811/scAdE"
-
-    const payload = {
-        totale: receipt.totale.toString().replace(".", ","),
-        mp: receipt.mp === "CC" ? "POS" : "CONTANTI",
-        servizi: receipt.righe
-    }
-
-    logStep("FISCAL REQUEST", payload)
-
-    const paramS = "idc=" + idc + "&receipt=" + JSON.stringify(payload)
-
-    const res = await fetch(url + "?" + paramS)
-    const json = await res.json()
-
-    logStep("FISCAL RESPONSE", json)
-
-    const fisc = json.return?.fiscAL || {}
-
-    return {
-        numero: fisc.documento_numero || "Servizio Non Disponibile",
-        data: fisc.data || "",
-        ora: fisc.ora || ""
-    }
-}
-
-async function fiscalizeAL(receipt) {
-
-    const idc = "b664c29d2984391ea1f3ec3e84013600"
-    const url = "http://trbl.it:7811/fiscalAL"
-
-    const payload = {
-        id: receipt._id,
-        totale: receipt.totale,
-        mp: receipt.mp === "CC" ? "POS" : "CONTANTI",
-        righe: receipt.righe
-    }
-
-    logStep("FISCAL REQUEST", payload)
-
-    const paramS = "idc=" + idc + "&receipt=" + JSON.stringify(payload)
-
-    const res = await fetch(url + "?" + paramS)
-    const json = await res.json()
-
-    logStep("FISCAL RESPONSE", json)
-
-    const fisc = json.return?.fiscAL || {}
-
-    return {
-        numero: fisc.documento_numero || "FISKALIZIMI I PADISPONUESHËM",
-        firma: fisc.firma || "DO TË FISKALIZOHET SAPO TË JETË E MUNDUR",
-        link: fisc.link || "",
-        data: fisc.data || "",
-        ora: fisc.ora || ""
-    }
-}
-
-// fine file posFlow.js
+})()

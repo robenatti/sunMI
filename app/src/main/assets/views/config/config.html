@@ -1,0 +1,64 @@
+<div class="page config-page">
+    <header class="page-header config-header">
+        <button class="btn back-button" id="backToPos">← CASSA</button>
+        <h1>CONFIGURAZIONE</h1>
+        <div></div>
+    </header>
+
+    <nav class="config-tabs">
+        <button class="btn config-tab active" data-panel="articlesPanel">ARTICOLI E PREZZI</button>
+        <button class="btn config-tab" data-panel="departmentsPanel">REPARTI</button>
+        <button class="btn config-tab" data-panel="cashesPanel">CASSE</button>
+    </nav>
+
+    <section id="articlesPanel" class="config-panel active">
+        <div class="article-browser">
+            <div class="article-browser-head">
+                <input id="configArticleSearch" type="search" placeholder="Cerca articolo...">
+                <button class="btn" id="newArticle">NUOVO</button>
+            </div>
+            <div id="configArticleList" class="config-article-list"></div>
+        </div>
+
+        <form id="articleForm" class="article-form">
+            <input type="hidden" id="articleId">
+            <input type="hidden" id="articleRev">
+
+            <label>NOME<input id="articleName" required></label>
+            <div class="form-row">
+                <label>TIPO<select id="articleType"><option value="S">S - Servizio</option><option value="P">P - Prodotto</option></select></label>
+                <label>PREZZO<input id="articlePrice" type="number" step="0.01" min="0"></label>
+            </div>
+            <div class="form-row">
+                <label>REPARTO<select id="articleDepartment"></select></label>
+                <label>POSIZIONE<input id="articlePosition" type="number" min="1" value="1"></label>
+            </div>
+            <label>BARCODE<input id="articleBarcode" inputmode="numeric"></label>
+            <div class="form-row">
+                <label>CATEGORIA<input id="articleCategory"></label>
+                <label>MARCA<input id="articleBrand"></label>
+            </div>
+            <label class="check-line"><input id="articleActive" type="checkbox" checked> ARTICOLO ATTIVO</label>
+            <button class="btn save-button" type="submit">SALVA ARTICOLO</button>
+        </form>
+    </section>
+
+    <section id="departmentsPanel" class="config-panel">
+        <div class="department-editor">
+            <div class="department-head"><span>REPARTO</span><span>NOME</span><span>VISTA</span></div>
+            <div id="departmentRows"></div>
+            <button class="btn save-button" id="saveDepartments">SALVA REPARTI</button>
+        </div>
+    </section>
+
+    <section id="cashesPanel" class="config-panel">
+        <div class="cash-editor">
+            <label>CASSA DI QUESTO DISPOSITIVO<select id="currentCash"></select></label>
+            <div id="cashRows"></div>
+            <div class="cash-actions">
+                <button class="btn" id="addCash">AGGIUNGI CASSA</button>
+                <button class="btn save-button" id="saveCashes">SALVA CASSE</button>
+            </div>
+        </div>
+    </section>
+</div>
