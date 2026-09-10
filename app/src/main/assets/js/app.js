@@ -27,10 +27,10 @@ const AppAPI = (() => {
     }
 
     async function init() {
-        if (initialized) return
+        if (initialized) return;
 
-        await DB.init()
-        await Catalog.init()
+        await DB.init();
+        await Catalog.init();
 
         [
             "change",
