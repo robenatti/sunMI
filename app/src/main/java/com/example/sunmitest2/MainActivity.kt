@@ -91,6 +91,16 @@ class MainActivity : Activity() {
         webView.loadUrl("https://appassets.androidplatform.net/assets/index.html")
     }
 
+    @Suppress("DEPRECATION")
+    override fun onBackPressed() {
+        if (!::webView.isInitialized) return
+
+        webView.evaluateJavascript(
+            "window.onAndroidBack ? window.onAndroidBack() : false",
+            null
+        )
+    }
+
     private fun handleCommand(json: String) {
         try {
             val req = JSONObject(json)
