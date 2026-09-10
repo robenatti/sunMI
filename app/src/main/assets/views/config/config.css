@@ -1,21 +1,25 @@
 .config-page {
     display: grid;
-    grid-template-rows: auto 4rem 1fr;
+    grid-template-rows: 3.5rem 3.5rem 1fr;
 }
 
 .config-header {
-    grid-template-columns: 9rem 1fr 9rem;
+    position: relative;
+}
+
+.header-save-slot {
+    visibility: hidden;
 }
 
 .config-tabs {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: 0.5rem;
 }
 
 .config-tab.active {
-    border-color: #4da3ff;
-    background: #2c3342;
+    border-color: #5a616b;
+    background: #2a2e34;
 }
 
 .config-panel {
@@ -57,13 +61,28 @@
 }
 
 .config-article-list {
-    overflow-y: auto;
+    overflow-y: scroll;
     min-height: 0;
+    scrollbar-width: thin;
+    scrollbar-color: #555b64 #15181d;
+}
+
+.config-article-list::-webkit-scrollbar {
+    width: 8px;
+}
+
+.config-article-list::-webkit-scrollbar-track {
+    background: #15181d;
+}
+
+.config-article-list::-webkit-scrollbar-thumb {
+    background: #555b64;
+    border-radius: 8px;
 }
 
 .config-article-row {
     width: 100%;
-    min-height: 3.2rem;
+    min-height: 3.8rem;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -105,9 +124,14 @@
     align-items: center;
 }
 
-.save-button {
-    min-height: 3.5rem;
-    background: #1f4d36;
+.config-save-fixed {
+    position: fixed;
+    top: 0.7rem;
+    right: 0.7rem;
+    z-index: 2500;
+    width: 9rem;
+    height: 3.1rem;
+    min-height: 3.1rem;
 }
 
 .department-editor,
@@ -141,7 +165,7 @@
 
 .cash-actions {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
     gap: 0.6rem;
     margin-top: 1rem;
 }

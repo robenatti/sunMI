@@ -2,13 +2,14 @@
     <header class="page-header config-header">
         <button class="btn back-button" id="backToPos">← CASSA</button>
         <h1>CONFIGURAZIONE</h1>
-        <button class="btn" id="runAudit">DIAGNOSTICA</button>
+        <div class="header-save-slot">SALVA</div>
     </header>
 
     <nav class="config-tabs">
         <button class="btn config-tab active" data-panel="articlesPanel">ARTICOLI E PREZZI</button>
         <button class="btn config-tab" data-panel="departmentsPanel">REPARTI</button>
         <button class="btn config-tab" data-panel="cashesPanel">CASSE</button>
+        <button class="btn" id="runAudit">DIAGNOSTICA</button>
     </nav>
 
     <section id="articlesPanel" class="config-panel active">
@@ -31,7 +32,14 @@
             </div>
             <div class="form-row">
                 <label>REPARTO<select id="articleDepartment"></select></label>
-                <label>POSIZIONE<input id="articlePosition" type="number" min="1" value="1"></label>
+                <label>POSIZIONE
+                    <select id="articlePosition">
+                        <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option>
+                        <option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option>
+                        <option value="9">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option>
+                        <option value="13">13</option><option value="14">14</option><option value="15">15</option><option value="16">16</option>
+                    </select>
+                </label>
             </div>
             <label>BARCODE<input id="articleBarcode" inputmode="numeric"></label>
             <div class="form-row">
@@ -39,7 +47,7 @@
                 <label>MARCA<input id="articleBrand"></label>
             </div>
             <label class="check-line"><input id="articleActive" type="checkbox" checked> ARTICOLO ATTIVO</label>
-            <button class="btn save-button" type="submit">SALVA ARTICOLO</button>
+            <button class="btn save-button config-save-fixed" type="submit">SALVA</button>
         </form>
     </section>
 
@@ -47,7 +55,7 @@
         <div class="department-editor">
             <div class="department-head"><span>REPARTO</span><span>NOME</span><span>VISTA</span></div>
             <div id="departmentRows"></div>
-            <button class="btn save-button" id="saveDepartments">SALVA REPARTI</button>
+            <button class="btn save-button config-save-fixed" id="saveDepartments">SALVA</button>
         </div>
     </section>
 
@@ -57,8 +65,8 @@
             <div id="cashRows"></div>
             <div class="cash-actions">
                 <button class="btn" id="addCash">AGGIUNGI CASSA</button>
-                <button class="btn save-button" id="saveCashes">SALVA CASSE</button>
             </div>
+            <button class="btn save-button config-save-fixed" id="saveCashes">SALVA</button>
         </div>
     </section>
 </div>

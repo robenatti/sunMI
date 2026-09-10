@@ -1,11 +1,12 @@
 <div class="page summary-page">
-    <header class="page-header">
+    <header class="page-header summary-header">
         <button class="btn back-button" id="backToPos">← CASSA</button>
         <h1>RIEPILOGO GIORNATA</h1>
-        <input id="summaryDate" type="date">
+        <button class="btn header-save" id="closeDayPrint">CHIUSURA</button>
     </header>
 
     <section class="cash-filter">
+        <label class="date-filter">DATA <input id="summaryDate" type="date"></label>
         <span class="section-label">CASSE</span>
         <div id="cashChecks" class="cash-checks"></div>
     </section>
