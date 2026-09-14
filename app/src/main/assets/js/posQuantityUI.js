@@ -20,6 +20,13 @@ const PosQuantityUI = (() => {
         }) + " €";
     }
 
+    function moneyCompact(value) {
+        return Number(value || 0).toLocaleString("it-IT", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+    }
+
     function selectedIndex() {
         return Array.from(document.querySelectorAll("#carrello .cart-row"))
             .findIndex(row => row.classList.contains("selected"));
@@ -82,24 +89,40 @@ const PosQuantityUI = (() => {
             if (!item) return;
 
             const q = Number(item.quantita || 1);
-            const name = row.children[0];
-            const price = row.children[1];
-            if (!name || !price) return;
+            const unitPrice = Number(item.prezzo || 0);
 
-            name.className = "cart-name-wrap";
-            name.innerHTML = "";
+            row.innerHTML = "";
+            row.style.display = "grid";
+            row.style.gridTemplateColumns = "minmax(0, 1fr) auto minmax(5.5rem, 1fr)";
+            row.style.columnGap = "0.65rem";
+
+            const name = document.createElement("span");
+            name.textContent = item.nome;
+            name.style.minWidth = "0";
+            name.style.overflow = "hidden";
+            name.style.textOverflow = "ellipsis";
+            name.style.whiteSpace = "nowrap";
+            name.style.textAlign = "left";
+            row.appendChild(name);
 
             if (q > 1) {
-                const qty = document.createElement("span");
-                qty.className = "cart-qty";
-                qty.textContent = q + " ×";
-                name.appendChild(qty);
+                const calculation = document.createElement("span");
+                calculation.textContent = q + " × " + moneyCompact(unitPrice);
+                calculation.style.gridColumn = "2";
+                calculation.style.justifySelf = "center";
+                calculation.style.fontSize = "0.72rem";
+                calculation.style.opacity = "0.7";
+                calculation.style.whiteSpace = "nowrap";
+                row.appendChild(calculation);
             }
 
-            const label = document.createElement("span");
-            label.textContent = item.nome;
-            name.appendChild(label);
-            price.textContent = money(Number(item.prezzo || 0) * q);
+            const total = document.createElement("span");
+            total.textContent = money(unitPrice * q);
+            total.style.gridColumn = "3";
+            total.style.justifySelf = "end";
+            total.style.fontWeight = "600";
+            total.style.whiteSpace = "nowrap";
+            row.appendChild(total);
         });
 
         const count = state.items
