@@ -121,6 +121,10 @@ const AppAPI = (() => {
         POS.setPrice(index, price)
     }
 
+    function setItemValues(index, quantity, price) {
+        POS.setItemValues(index, quantity, price)
+    }
+
     function duplicateItem(index, count) {
         POS.duplicateItem(index, count)
     }
@@ -184,6 +188,7 @@ const AppAPI = (() => {
         getPosState,
         removeItem,
         setItemPrice,
+        setItemValues,
         duplicateItem,
         addDiscount,
         resetPos,

@@ -3,8 +3,12 @@ window.AppViews = window.AppViews || {};
 AppViews.cassa = (() => {
     let activeReparto = null;
     let selectedIndex = -1;
-    let keypadBuffer = "";
-    let keypadMode = "amount";
+    let quantityBuffer = "";
+    let amountBuffer = "";
+    let activeInput = "quantity";
+    let percentMode = false;
+    let cancelCount = 0;
+    let cancelTimer = null;
     let unsubscribers = [];
     let lastItemCount = 0;
 
@@ -15,30 +19,60 @@ AppViews.cassa = (() => {
         }) + " €";
     }
 
-    function parseKeypad() {
-        if (!keypadBuffer) return null;
-        const value = Number(keypadBuffer.replace(",", "."));
-        return Number.isFinite(value) ? value : null;
+    function formatMoneyCompact(value) {
+        return Number(value || 0).toLocaleString("it-IT", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
     }
 
-    function clearKeypad() {
-        keypadBuffer = "";
-        keypadMode = "amount";
-        renderSelected();
+    function parseAmount(value) {
+        if (!value) return null;
+        const number = Number(String(value).replace(",", "."));
+        return Number.isFinite(number) ? number : null;
     }
 
-    function renderSelected() {
+    function getSelectedItem() {
+        const state = AppAPI.getPosState();
+        return selectedIndex >= 0 && selectedIndex < state.items.length
+            ? state.items[selectedIndex]
+            : null;
+    }
+
+    function resetCancel() {
+        cancelCount = 0;
+        if (cancelTimer) clearTimeout(cancelTimer);
+        cancelTimer = null;
+        const counter = document.getElementById("cancelCount");
+        if (counter) counter.textContent = "";
+    }
+
+    function clearInputState(showCurrent) {
+        quantityBuffer = "";
+        amountBuffer = "";
+        activeInput = "quantity";
+        percentMode = false;
+        renderSelected(showCurrent !== false);
+    }
+
+    function renderSelected(showCurrent) {
         const quantityDisplay = document.getElementById("quantityDisplay");
         const priceDisplay = document.getElementById("selectedPrice");
+        const quantityBox = document.getElementById("quantityBox");
+        const amountBox = document.getElementById("amountBox");
         if (!quantityDisplay || !priceDisplay) return;
 
-        quantityDisplay.textContent = keypadBuffer
-            ? keypadBuffer + (keypadMode === "percent" ? "%" : "")
-            : "0";
+        const item = getSelectedItem();
+        const quantity = item ? Number(item.quantita || 1) : 0;
+        const price = item ? Number(item.prezzo || 0) : 0;
 
-        const state = AppAPI.getPosState();
-        const item = selectedIndex >= 0 ? state.items[selectedIndex] : null;
-        priceDisplay.textContent = item ? formatMoney(item.prezzo) : "0,00 €";
+        quantityDisplay.textContent = quantityBuffer || (showCurrent ? String(quantity) : "0");
+        priceDisplay.textContent = amountBuffer
+            ? amountBuffer + (percentMode ? " %" : " €")
+            : (showCurrent ? formatMoney(price) : "0,00 €");
+
+        if (quantityBox) quantityBox.classList.toggle("active", activeInput === "quantity");
+        if (amountBox) amountBox.classList.toggle("active", activeInput === "amount");
     }
 
     function normalizeSelection(state) {
@@ -55,6 +89,56 @@ AppViews.cassa = (() => {
         lastItemCount = count;
     }
 
+    function createCartRow(item, index) {
+        const quantity = Number(item.quantita || 1);
+        const unitPrice = Number(item.prezzo || 0);
+        const row = document.createElement("button");
+        row.type = "button";
+        row.className = "cart-row";
+        row.style.display = "grid";
+        row.style.gridTemplateColumns = "minmax(0, 1fr) auto minmax(5.5rem, 1fr)";
+        row.style.columnGap = "0.65rem";
+
+        if (index === selectedIndex) row.classList.add("selected");
+
+        const name = document.createElement("span");
+        name.textContent = item.nome;
+        name.style.minWidth = "0";
+        name.style.overflow = "hidden";
+        name.style.textOverflow = "ellipsis";
+        name.style.whiteSpace = "nowrap";
+        name.style.textAlign = "left";
+        row.appendChild(name);
+
+        if (quantity > 1) {
+            const calculation = document.createElement("span");
+            calculation.textContent = quantity + " × " + formatMoneyCompact(unitPrice);
+            calculation.style.gridColumn = "2";
+            calculation.style.justifySelf = "center";
+            calculation.style.fontSize = "0.72rem";
+            calculation.style.opacity = "0.7";
+            calculation.style.whiteSpace = "nowrap";
+            row.appendChild(calculation);
+        }
+
+        const total = document.createElement("span");
+        total.textContent = formatMoney(unitPrice * quantity);
+        total.style.gridColumn = "3";
+        total.style.justifySelf = "end";
+        total.style.fontWeight = "600";
+        total.style.whiteSpace = "nowrap";
+        row.appendChild(total);
+
+        row.addEventListener("click", () => {
+            resetCancel();
+            selectedIndex = index;
+            clearInputState(true);
+            renderCart();
+        });
+
+        return row;
+    }
+
     function renderCart() {
         const container = document.getElementById("carrello");
         if (!container) return;
@@ -64,29 +148,14 @@ AppViews.cassa = (() => {
         container.innerHTML = "";
 
         state.items.forEach((item, index) => {
-            const row = document.createElement("button");
-            row.type = "button";
-            row.className = "cart-row";
-            if (index === selectedIndex) row.classList.add("selected");
-
-            const name = document.createElement("span");
-            name.textContent = item.nome;
-
-            const price = document.createElement("span");
-            price.textContent = formatMoney(item.prezzo);
-
-            row.appendChild(name);
-            row.appendChild(price);
-            row.addEventListener("click", () => {
-                selectedIndex = index;
-                clearKeypad();
-                renderCart();
-            });
-
-            container.appendChild(row);
+            container.appendChild(createCartRow(item, index));
         });
 
-        document.getElementById("articleCount").textContent = String(state.items.length);
+        const articleCount = state.items
+            .filter(item => !item.sconto)
+            .reduce((sum, item) => sum + Number(item.quantita || 1), 0);
+
+        document.getElementById("articleCount").textContent = String(articleCount);
         document.getElementById("totalValue").textContent = formatMoney(state.total);
 
         document.querySelectorAll(".pos-app button").forEach(button => {
@@ -95,7 +164,7 @@ AppViews.cassa = (() => {
             }
         });
 
-        renderSelected();
+        renderSelected(true);
 
         if (selectedIndex === state.items.length - 1 && selectedIndex >= 0) {
             container.scrollTop = container.scrollHeight;
@@ -129,8 +198,9 @@ AppViews.cassa = (() => {
     }
 
     function addArticle(id) {
+        resetCancel();
         AppAPI.addArticolo(id, null);
-        clearKeypad();
+        clearInputState(true);
     }
 
     function renderListArticles(text) {
@@ -203,38 +273,129 @@ AppViews.cassa = (() => {
         if (reparti.length) setActiveReparto(reparti[0].id);
     }
 
-    function handleKey(key) {
-        if (/^[0-9]$/.test(key)) {
-            keypadBuffer = keypadBuffer === "0" ? key : keypadBuffer + key;
+    function selectInput(name) {
+        resetCancel();
+        activeInput = name;
+        percentMode = false;
+
+        if (name === "quantity") quantityBuffer = "";
+        if (name === "amount") amountBuffer = "";
+
+        renderSelected(true);
+    }
+
+    function appendKey(key) {
+        resetCancel();
+
+        if (activeInput === "quantity") {
+            if (key === ",") return;
+            quantityBuffer = quantityBuffer === "0" ? key : quantityBuffer + key;
         } else if (key === ",") {
-            if (!keypadBuffer.includes(",")) keypadBuffer = (keypadBuffer || "0") + ",";
-        } else if (key === "←") {
-            keypadBuffer = keypadBuffer.slice(0, -1);
-        } else if (key === "CL") {
-            clearKeypad();
-            return;
-        } else if (key === "%") {
-            keypadMode = "percent";
-        } else if (key === "OK") {
-            const value = parseKeypad();
-            if (selectedIndex >= 0 && value != null && keypadMode === "amount") {
-                AppAPI.setItemPrice(selectedIndex, value);
-                clearKeypad();
-                return;
-            }
-        } else if (key === "X") {
-            const value = parseKeypad();
-            if (selectedIndex >= 0 && value != null) {
-                AppAPI.duplicateItem(selectedIndex, value);
-                clearKeypad();
-                return;
-            }
+            if (!amountBuffer.includes(",")) amountBuffer = (amountBuffer || "0") + ",";
+        } else {
+            amountBuffer = amountBuffer === "0" ? key : amountBuffer + key;
         }
 
-        renderSelected();
+        renderSelected(true);
+    }
+
+    function multiply() {
+        resetCancel();
+        const item = getSelectedItem();
+        if (!item) return;
+
+        const quantity = quantityBuffer
+            ? Math.floor(Number(quantityBuffer))
+            : Number(item.quantita || 1);
+
+        if (!Number.isFinite(quantity) || quantity <= 0) return;
+
+        activeInput = "amount";
+        amountBuffer = "";
+        percentMode = false;
+        renderSelected(true);
+    }
+
+    function confirm() {
+        resetCancel();
+        const item = getSelectedItem();
+        if (selectedIndex < 0 || !item || percentMode) return;
+
+        const quantity = quantityBuffer
+            ? Math.floor(Number(quantityBuffer))
+            : Number(item.quantita || 1);
+        const price = amountBuffer
+            ? parseAmount(amountBuffer)
+            : Number(item.prezzo || 0);
+
+        if (!Number.isFinite(quantity) || quantity <= 0 || price == null) return;
+
+        AppAPI.setItemValues(selectedIndex, quantity, price);
+        clearInputState(true);
+    }
+
+    function discount() {
+        resetCancel();
+        const value = parseAmount(amountBuffer);
+        if (value == null || value <= 0) return;
+
+        AppAPI.addDiscount(value, percentMode);
+        clearInputState(true);
+    }
+
+    function cancel() {
+        quantityBuffer = "";
+        amountBuffer = "";
+        activeInput = "quantity";
+        percentMode = false;
+        renderSelected(false);
+
+        cancelCount++;
+        const counter = document.getElementById("cancelCount");
+        if (counter && cancelCount < 3) counter.textContent = cancelCount + "/3";
+
+        if (cancelTimer) clearTimeout(cancelTimer);
+
+        if (cancelCount >= 3) {
+            resetCancel();
+            selectedIndex = -1;
+            lastItemCount = 0;
+            AppAPI.resetPos();
+            return;
+        }
+
+        cancelTimer = setTimeout(resetCancel, 2500);
+    }
+
+    function handleKey(key) {
+        if (/^[0-9]$/.test(key) || key === ",") {
+            appendKey(key);
+            return;
+        }
+
+        if (key === "X") {
+            multiply();
+            return;
+        }
+
+        if (key === "OK") {
+            confirm();
+            return;
+        }
+
+        if (key === "%") {
+            resetCancel();
+            activeInput = "amount";
+            amountBuffer = "";
+            percentMode = true;
+            renderSelected(true);
+        }
     }
 
     function bindKeypad() {
+        document.getElementById("quantityBox").addEventListener("click", () => selectInput("quantity"));
+        document.getElementById("amountBox").addEventListener("click", () => selectInput("amount"));
+
         document.querySelectorAll("#keypad .key").forEach(button => {
             button.addEventListener("click", () => {
                 handleKey(button.dataset.key || button.textContent.trim());
@@ -267,36 +428,30 @@ AppViews.cassa = (() => {
         document.getElementById("deleteItem").addEventListener("click", () => {
             if (selectedIndex < 0) return;
 
+            resetCancel();
             const state = AppAPI.getPosState();
             const removedIndex = selectedIndex;
 
-            if (removedIndex === state.items.length - 1) {
+            if (state.items.length <= 1) {
+                selectedIndex = -1;
+            } else if (removedIndex >= state.items.length - 1) {
                 selectedIndex = removedIndex - 1;
             }
 
             AppAPI.removeItem(removedIndex);
-            clearKeypad();
+            clearInputState(true);
         });
 
-        document.getElementById("discountItem").addEventListener("click", () => {
-            const value = parseKeypad();
-            if (value == null || value <= 0) return;
-            AppAPI.addDiscount(value, keypadMode === "percent");
-            clearKeypad();
-        });
-
-        document.getElementById("cancelSale").addEventListener("click", () => {
-            selectedIndex = -1;
-            lastItemCount = 0;
-            clearKeypad();
-            AppAPI.resetPos();
-        });
+        document.getElementById("discountItem").addEventListener("click", discount);
+        document.getElementById("cancelSale").addEventListener("click", cancel);
 
         document.getElementById("cashPayment").addEventListener("click", () => {
+            resetCancel();
             AppAPI.pay("CA").catch(() => {});
         });
 
         document.getElementById("cardPayment").addEventListener("click", () => {
+            resetCancel();
             AppAPI.pay("CC").catch(() => {});
         });
 
@@ -314,12 +469,16 @@ AppViews.cassa = (() => {
             "carrello",
             "articleCount",
             "totalValue",
+            "quantityBox",
             "quantityDisplay",
+            "amountBox",
             "selectedPrice",
             "keypad",
+            "deleteItem",
+            "discountItem",
+            "cancelSale",
             "openConfig",
             "openSummary",
-            "cancelSale",
             "cashPayment",
             "cardPayment",
             "progressPopup"
@@ -334,6 +493,7 @@ AppViews.cassa = (() => {
     async function mount() {
         lastItemCount = AppAPI.getPosState().items.length;
         selectedIndex = lastItemCount ? lastItemCount - 1 : -1;
+        clearInputState(true);
 
         renderReparti();
         renderCart();
@@ -350,9 +510,7 @@ AppViews.cassa = (() => {
         unsubscribers.push(AppAPI.on("pos:print:end", () => showProgress("Operazione completata", 100)));
         unsubscribers.push(AppAPI.on("pos:print:error", detail => showProgress("Vendita registrata. Errore stampa: " + detail.message, 100, true)));
         unsubscribers.push(AppAPI.on("pos:payment:end", detail => {
-            if (!detail.printError) {
-                setTimeout(hideProgress, 500);
-            }
+            if (!detail.printError) setTimeout(hideProgress, 500);
         }));
         unsubscribers.push(AppAPI.on("pos:error", detail => showProgress(detail.message || "Errore", 100, true)));
     }
@@ -360,6 +518,8 @@ AppViews.cassa = (() => {
     function unmount() {
         unsubscribers.forEach(fn => fn());
         unsubscribers = [];
+        if (cancelTimer) clearTimeout(cancelTimer);
+        cancelTimer = null;
     }
 
     return { mount, unmount, audit };
