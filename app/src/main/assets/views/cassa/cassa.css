@@ -155,7 +155,7 @@
 
 .summary {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 0.8fr 0.8fr 1.4fr;
     gap: 0.5rem;
 }
 
@@ -260,7 +260,9 @@
 }
 
 .action-stack .ok {
-    background: #263943;
+    background: #1d6d38;
+    border-color: #2f8f50;
+    color: #ffffff;
 }
 
 .icon-button {
@@ -310,11 +312,18 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    gap: 0.45rem;
     border: 1px solid #2a2f38;
     border-radius: 0.6rem;
     background: #101216;
     font-weight: 700;
     letter-spacing: 0.02em;
+}
+
+.app-version {
+    font-size: 0.78rem;
+    opacity: 0.72;
+    font-weight: 600;
 }
 
 .footer .tool {

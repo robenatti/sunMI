@@ -3,6 +3,7 @@ if (true) {
 
     var Config = Config || {};
 
+    Config.version = "2.4";
     Config.piva = "02881040360";
 
     Config.dataScadenza = "30/09/2029";
