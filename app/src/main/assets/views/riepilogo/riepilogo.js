@@ -55,6 +55,40 @@ AppViews.riepilogo = (() => {
         }
     }
 
+    function addPdfButton(tr, receipt) {
+        const td = document.createElement("td")
+        const button = document.createElement("button")
+        const fileName = receipt.fiscal && receipt.fiscal.fileName
+            ? receipt.fiscal.fileName
+            : ""
+
+        button.type = "button"
+        button.className = "pdf-button"
+        button.textContent = "PDF"
+
+        if (!fileName) {
+            button.classList.add("pdf-missing")
+        } else {
+            Bridge.exec("pdf_exists", { fileName: fileName }, 3000)
+                .then(result => {
+                    if (!result || !result.exists) button.classList.add("pdf-missing")
+                })
+                .catch(() => button.classList.add("pdf-missing"))
+        }
+
+        button.addEventListener("click", event => {
+            event.stopPropagation()
+
+            if (!fileName) return
+
+            Bridge.exec("pdf_open", { fileName: fileName }, 5000)
+                .catch(() => button.classList.add("pdf-missing"))
+        })
+
+        td.appendChild(button)
+        tr.appendChild(td)
+    }
+
     async function refresh() {
         const day = document.getElementById("summaryDate").value.replace(/-/g, "")
         const data = await AppAPI.getDailySummary(day, selectedCasse())
@@ -82,6 +116,8 @@ AppViews.riepilogo = (() => {
                 td.textContent = value
                 tr.appendChild(td)
             })
+
+            addPdfButton(tr, receipt)
 
             tr.addEventListener("click", () => renderDetail(receipt))
             body.appendChild(tr)

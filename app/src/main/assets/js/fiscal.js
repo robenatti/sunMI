@@ -30,13 +30,27 @@ const Fiscal = (() => {
         const res = await fetch(urlIT + "?" + paramS)
         const json = await res.json()
         const fisc = json.return && json.return.fiscAL ? json.return.fiscAL : {}
+        const fileName = fisc.fileName || ""
+        const contentB64 = json.return && json.return.contentB64 ? json.return.contentB64 : ""
+
+        if (fileName && contentB64) {
+            try {
+                await Bridge.exec("pdf_save", {
+                    fileName: fileName,
+                    contentB64: contentB64
+                }, 15000)
+            } catch (e) {
+                console.error("ERRORE SALVATAGGIO PDF", e)
+            }
+        }
 
         return {
             numero: fisc.documento_numero || "Servizio Non Disponibile",
             firma: fisc.firma || "",
             link: fisc.link || "",
             data: fisc.data || "",
-            ora: fisc.ora || ""
+            ora: fisc.ora || "",
+            fileName: fileName
         }
     }
 

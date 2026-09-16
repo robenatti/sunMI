@@ -119,6 +119,21 @@
     background: #243044;
 }
 
+.pdf-button {
+    min-width: 3.2rem;
+    padding: 0.35rem 0.55rem;
+    border: 1px solid #5a6573;
+    border-radius: 0.35rem;
+    background: #242933;
+    color: #ffffff;
+    font-weight: 700;
+}
+
+.pdf-button.pdf-missing {
+    opacity: 0.45;
+    text-decoration: line-through;
+}
+
 .receipt-detail {
     padding: 1rem;
 }

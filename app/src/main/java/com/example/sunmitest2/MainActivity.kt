@@ -5,14 +5,17 @@
 package com.example.sunmitest2
 
 import android.app.Activity
+import android.content.Intent
 import android.os.Build
 import android.os.Bundle
+import android.util.Base64
 import android.webkit.JavascriptInterface
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Toast
+import androidx.core.content.FileProvider
 import androidx.webkit.WebViewAssetLoader
 import com.example.sunmitest2.printer.SunmiPrinterDriver
 import com.sunmi.peripheral.printer.InnerPrinterCallback
@@ -20,6 +23,7 @@ import com.sunmi.peripheral.printer.InnerPrinterManager
 import com.sunmi.peripheral.printer.InnerResultCallback
 import com.sunmi.peripheral.printer.SunmiPrinterService
 import org.json.JSONObject
+import java.io.File
 
 class MainActivity : Activity() {
 
@@ -101,6 +105,12 @@ class MainActivity : Activity() {
         )
     }
 
+    private fun pdfFile(fileName: String): File {
+        val pdfDir = File(filesDir, "pdf")
+        if (!pdfDir.exists()) pdfDir.mkdirs()
+        return File(pdfDir, File(fileName).name)
+    }
+
     private fun handleCommand(json: String) {
         try {
             val req = JSONObject(json)
@@ -146,6 +156,58 @@ class MainActivity : Activity() {
                             )
                         }
                     )
+                }
+
+                "pdf_save" -> {
+                    val payload = req.getJSONObject("payload")
+                    val fileName = payload.optString("fileName")
+                    val contentB64 = payload.optString("contentB64")
+
+                    if (fileName.isBlank() || contentB64.isBlank()) {
+                        sendError(id, "PDF_DATA_MISSING", "Nome file o contenuto PDF mancante")
+                        return
+                    }
+
+                    val file = pdfFile(fileName)
+                    file.writeBytes(Base64.decode(contentB64, Base64.DEFAULT))
+
+                    sendSuccess(id, JSONObject()
+                        .put("fileName", file.name)
+                        .put("saved", true))
+                }
+
+                "pdf_exists" -> {
+                    val payload = req.getJSONObject("payload")
+                    val fileName = payload.optString("fileName")
+                    val file = pdfFile(fileName)
+
+                    sendSuccess(id, JSONObject()
+                        .put("fileName", file.name)
+                        .put("exists", file.exists()))
+                }
+
+                "pdf_open" -> {
+                    val payload = req.getJSONObject("payload")
+                    val fileName = payload.optString("fileName")
+                    val file = pdfFile(fileName)
+
+                    if (!file.exists()) {
+                        sendError(id, "PDF_NOT_FOUND", "PDF locale non trovato")
+                        return
+                    }
+
+                    val uri = FileProvider.getUriForFile(
+                        this,
+                        packageName + ".fileprovider",
+                        file
+                    )
+
+                    val intent = Intent(Intent.ACTION_VIEW)
+                    intent.setDataAndType(uri, "application/pdf")
+                    intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    startActivity(intent)
+
+                    sendSuccess(id, JSONObject().put("opened", true))
                 }
 
                 else -> {
