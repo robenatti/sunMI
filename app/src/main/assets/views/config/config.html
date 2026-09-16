@@ -73,11 +73,26 @@
 
     <section id="passwordPanel" class="config-panel">
         <div class="password-editor">
-            <label>PASSWORD ATTUALE<input type="password" disabled></label>
-            <label>NUOVA PASSWORD<input type="password" disabled></label>
-            <label>CONFERMA NUOVA PASSWORD<input type="password" disabled></label>
-            <button class="btn save-button" type="button" disabled>CAMBIA PASSWORD</button>
-            <div class="password-demo-note">Funzione non disponibile nella demo</div>
+            <div class="password-zone">
+                <div class="password-zone-title">PASSWORD MODIFICATA DAL SITO</div>
+                <label>PASSWORD<input type="password" disabled></label>
+                <button class="btn save-button" type="button" disabled>SALVA</button>
+                <div class="password-demo-note">Funzione non disponibile nella demo</div>
+            </div>
+
+            <div class="password-zone">
+                <div class="password-zone-title">CAMBIO PASSWORD DA APP</div>
+                <label>PASSWORD VECCHIA<input type="password" disabled></label>
+                <label>NUOVA PASSWORD<input type="password" disabled></label>
+                <label>CONFERMA NUOVA PASSWORD<input type="password" disabled></label>
+                <button class="btn save-button" type="button" disabled>SALVA</button>
+                <div class="password-demo-note">Funzione non disponibile nella demo</div>
+            </div>
+
+            <div class="password-zone">
+                <div class="password-zone-title">CAMBIO AUTOMATICO</div>
+                <label class="check-line password-auto-check"><input id="automaticPasswordChange" type="checkbox"> CAMBIO AUTOMATICO PASSWORD</label>
+            </div>
         </div>
     </section>
 </div>

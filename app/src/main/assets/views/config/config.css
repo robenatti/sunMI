@@ -150,14 +150,36 @@
     gap: 0.8rem;
 }
 
+.password-zone {
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+    padding: 0.9rem;
+    background: #181b21;
+    border: 1px solid #2a2f38;
+    border-radius: 0.5rem;
+}
+
+.password-zone-title {
+    font-weight: 700;
+    font-size: 0.9rem;
+}
+
+.password-zone .save-button {
+    align-self: flex-start;
+}
+
 .password-editor input:disabled,
 .password-editor button:disabled {
     opacity: 0.55;
 }
 
+.password-auto-check {
+    flex-direction: row !important;
+    align-items: center;
+}
+
 .password-demo-note {
-    margin-top: 0.25rem;
-    text-align: center;
     font-size: 0.85rem;
     opacity: 0.65;
 }
