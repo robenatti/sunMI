@@ -13,7 +13,7 @@
 
 .config-tabs {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     gap: 0.5rem;
 }
 
@@ -39,7 +39,8 @@
 .article-browser,
 .article-form,
 .department-editor,
-.cash-editor {
+.cash-editor,
+.password-editor {
     min-height: 0;
     background: #12141a;
     border: 1px solid #2a2f38;
@@ -105,7 +106,8 @@
 }
 
 .article-form label,
-.cash-editor label {
+.cash-editor label,
+.password-editor label {
     display: flex;
     flex-direction: column;
     gap: 0.3rem;
@@ -135,10 +137,29 @@
 }
 
 .department-editor,
-.cash-editor {
+.cash-editor,
+.password-editor {
     width: min(900px, 100%);
     margin: 0 auto;
     overflow-y: auto;
+}
+
+.password-editor {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+}
+
+.password-editor input:disabled,
+.password-editor button:disabled {
+    opacity: 0.55;
+}
+
+.password-demo-note {
+    margin-top: 0.25rem;
+    text-align: center;
+    font-size: 0.85rem;
+    opacity: 0.65;
 }
 
 .department-head,

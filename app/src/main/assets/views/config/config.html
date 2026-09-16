@@ -9,6 +9,7 @@
         <button class="btn config-tab active" data-panel="articlesPanel">ARTICOLI E PREZZI</button>
         <button class="btn config-tab" data-panel="departmentsPanel">REPARTI</button>
         <button class="btn config-tab" data-panel="cashesPanel">CASSE</button>
+        <button class="btn config-tab" data-panel="passwordPanel">PASSWORD</button>
         <button class="btn" id="runAudit">DIAGNOSTICA</button>
     </nav>
 
@@ -67,6 +68,16 @@
                 <button class="btn" id="addCash">AGGIUNGI CASSA</button>
             </div>
             <button class="btn save-button config-save-fixed" id="saveCashes">SALVA</button>
+        </div>
+    </section>
+
+    <section id="passwordPanel" class="config-panel">
+        <div class="password-editor">
+            <label>PASSWORD ATTUALE<input type="password" disabled></label>
+            <label>NUOVA PASSWORD<input type="password" disabled></label>
+            <label>CONFERMA NUOVA PASSWORD<input type="password" disabled></label>
+            <button class="btn save-button" type="button" disabled>CAMBIA PASSWORD</button>
+            <div class="password-demo-note">Funzione non disponibile nella demo</div>
         </div>
     </section>
 </div>
