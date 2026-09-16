@@ -146,6 +146,15 @@ AppViews.config = (() => {
         renderDepartments()
     }
 
+    function updateCashDeleteButtons() {
+        const current = configData.config.casse || []
+        const selected = Number(document.getElementById("currentCash").value || 0)
+
+        document.querySelectorAll(".cash-delete").forEach(button => {
+            button.disabled = current.length <= 1 || Number(button.dataset.id) === selected
+        })
+    }
+
     function renderCashes() {
         const rows = document.getElementById("cashRows")
         const select = document.getElementById("currentCash")
@@ -161,12 +170,27 @@ AppViews.config = (() => {
 
             const id = document.createElement("strong")
             id.textContent = String(cassa.id)
+
+            const controls = document.createElement("div")
+            controls.style.display = "grid"
+            controls.style.gridTemplateColumns = "1fr auto"
+            controls.style.gap = "0.6rem"
+
             const name = document.createElement("input")
             name.className = "cash-name"
             name.value = cassa.nome
 
+            const remove = document.createElement("button")
+            remove.type = "button"
+            remove.className = "btn cash-delete"
+            remove.dataset.id = cassa.id
+            remove.textContent = "ELIMINA"
+            remove.addEventListener("click", () => deleteCash(cassa.id))
+
+            controls.appendChild(name)
+            controls.appendChild(remove)
             row.appendChild(id)
-            row.appendChild(name)
+            row.appendChild(controls)
             rows.appendChild(row)
 
             const option = document.createElement("option")
@@ -176,6 +200,8 @@ AppViews.config = (() => {
         })
 
         select.value = String(configData.device.superConnect || 1)
+        select.onchange = updateCashDeleteButtons
+        updateCashDeleteButtons()
     }
 
     function addCash() {
@@ -183,6 +209,19 @@ AppViews.config = (() => {
         const max = current.reduce((m, c) => Math.max(m, Number(c.id || 0)), 0)
         current.push({ id: max + 1, nome: "Cassa " + (max + 1) })
         configData.config.casse = current
+        renderCashes()
+    }
+
+    function deleteCash(id) {
+        const current = configData.config.casse || []
+        if (current.length <= 1) return
+
+        const cashId = Number(id)
+        const selected = Number(document.getElementById("currentCash").value || 0)
+        if (!selected || cashId === selected) return
+
+        configData.device.superConnect = selected
+        configData.config.casse = current.filter(cassa => Number(cassa.id) !== cashId)
         renderCashes()
     }
 
