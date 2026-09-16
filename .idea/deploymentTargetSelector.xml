@@ -4,10 +4,10 @@
     <selectionStates>
       <SelectionState runConfigName="Sunmi">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2026-09-09T16:30:28.591460100Z">
+        <DropdownSelection timestamp="2026-09-14T15:21:05.615524100Z">
           <Target type="DEFAULT_BOOT">
             <handle>
-              <DeviceId pluginId="PhysicalDevice" identifier="serial=DE10P45810065" />
+              <DeviceId pluginId="Wireless" identifier="serviceName=adb-DE10P45810065-i0owUI" />
             </handle>
           </Target>
         </DropdownSelection>
