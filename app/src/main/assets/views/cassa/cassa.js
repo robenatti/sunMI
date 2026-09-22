@@ -395,6 +395,11 @@ AppViews.cassa = (() => {
         unsubscribers.push(AppAPI.on("pos:payment:end", detail => {
             if (detail.fiscalError) {
                 showProgress("Ricevuta salvata. Fiscalizzazione in attesa: nuovo tentativo automatico.", 100, true);
+
+                setTimeout(() => {
+                    document.getElementById("progressPopup").classList.remove("show", "error");
+                }, 1500);
+
                 return;
             }
 

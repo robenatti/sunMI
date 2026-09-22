@@ -56,7 +56,10 @@ function renderReceiptIT(r) {
         out.push({ text: "NON ANCORA FISCALIZZATO", align: "center", bold: true });
     }
 
-    out.push({ text: "Documento Commerciale Online", align: "center" });
+    if (!r.fiscalStatus || r.fiscalStatus === "OK") {
+        out.push({ text: "Documento Commerciale Online", align: "center" });
+    }
+
     out.push({ newline: 1 });
     out.push({ text: "ARRIVEDERCI E GRAZIE", align: "center", bold: true });
     out.push({ newline: 5 });
