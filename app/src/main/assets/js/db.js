@@ -97,7 +97,7 @@ const DB = (() => {
 
         remotes = {}
         Object.keys(dbs).forEach(key => {
-            remotes[key] = new PouchDB(base + "/" + dbNames[key])
+            remotes[key] = new PouchDB(base + "/" + dbNames[key], { skip_setup: true })
         })
     }
 

@@ -257,7 +257,6 @@ AppViews.config = (() => {
         document.getElementById("accountPiva").value = account.piva || ""
         document.getElementById("accountPin").value = account.pin || ""
         document.getElementById("accountPwd").value = account.pwd || ""
-        document.getElementById("automaticPasswordChange").checked = false
 
         ;["accountHeader1", "accountHeader2", "accountHeader3", "accountHeader4"].forEach(id => {
             document.getElementById(id).disabled = !allowHeader
@@ -292,10 +291,6 @@ AppViews.config = (() => {
             changes.cf = document.getElementById("accountCf").value.trim()
             changes.piva = document.getElementById("accountPiva").value.trim()
             changes.pin = document.getElementById("accountPin").value.trim()
-        }
-
-        if (document.getElementById("automaticPasswordChange").checked) {
-            changes.pwd = document.getElementById("accountPwd").value
         }
 
         try {
@@ -345,7 +340,6 @@ AppViews.config = (() => {
             "accountPiva",
             "accountPin",
             "accountPwd",
-            "automaticPasswordChange",
             "saveAccountConfig"
         ]
 
@@ -373,9 +367,6 @@ AppViews.config = (() => {
         document.getElementById("saveDepartments").addEventListener("click", saveDepartments)
         document.getElementById("addCash").addEventListener("click", addCash)
         document.getElementById("saveCashes").addEventListener("click", saveCashes)
-        document.getElementById("automaticPasswordChange").addEventListener("change", event => {
-            document.getElementById("accountPwd").disabled = !event.target.checked
-        })
         document.getElementById("saveAccountConfig").addEventListener("click", saveAccountConfig)
     }
 
