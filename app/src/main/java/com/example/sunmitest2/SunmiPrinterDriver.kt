@@ -28,9 +28,9 @@ class SunmiPrinterDriver(
     private fun profileFor(paperWidthMm: Int): PrintProfile {
         return if (paperWidthMm <= 58) {
             PrintProfile(
-                totalWidth = 32,
-                widths3 = intArrayOf(18, 4, 10),
-                widths2 = intArrayOf(20, 12)
+                totalWidth = 31,
+                widths3 = intArrayOf(17, 4, 10),
+                widths2 = intArrayOf(19, 12)
             )
         } else {
             PrintProfile(
