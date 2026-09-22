@@ -200,6 +200,8 @@ AppViews.config = (() => {
         })
 
         select.value = String(configData.device.superConnect || 1)
+        document.getElementById("paperWidthMm").value =
+            String(Number(configData.device.paperWidthMm || Config.paperWidthMm || 80) <= 58 ? 58 : 80)
         select.onchange = updateCashDeleteButtons
         updateCashDeleteButtons()
     }
@@ -231,8 +233,77 @@ AppViews.config = (() => {
             nome: row.querySelector(".cash-name").value.trim() || ("Cassa " + row.dataset.id)
         }))
 
-        configData = await AppAPI.saveCasse(casse, document.getElementById("currentCash").value)
+        configData = await AppAPI.saveCasse(
+            casse,
+            document.getElementById("currentCash").value,
+            document.getElementById("paperWidthMm").value
+        )
         renderCashes()
+    }
+
+    function renderAccount() {
+        const state = AppAPI.getAccountState()
+        const account = state.account || {}
+        const intestazione = account.intestazione || Config.intestazione || {}
+        const allowHeader = account.allowChangeIntestazione === true
+        const allowUser = account.allowChangeUsername === true
+
+        document.getElementById("accountHeader1").value = intestazione.riga1 || ""
+        document.getElementById("accountHeader2").value = intestazione.riga2 || ""
+        document.getElementById("accountHeader3").value = intestazione.riga3 || ""
+        document.getElementById("accountHeader4").value = intestazione.riga4 || ""
+
+        document.getElementById("accountCf").value = account.cf || ""
+        document.getElementById("accountPiva").value = account.piva || ""
+        document.getElementById("accountPin").value = account.pin || ""
+        document.getElementById("accountPwd").value = account.pwd || ""
+        document.getElementById("automaticPasswordChange").checked = false
+
+        ;["accountHeader1", "accountHeader2", "accountHeader3", "accountHeader4"].forEach(id => {
+            document.getElementById(id).disabled = !allowHeader
+        })
+
+        ;["accountCf", "accountPiva", "accountPin"].forEach(id => {
+            document.getElementById(id).disabled = !allowUser
+        })
+
+        document.getElementById("accountPwd").disabled = true
+        document.getElementById("headerPermission").textContent =
+            allowHeader ? "MODIFICA ABILITATA DAL SERVER" : "SOLA LETTURA"
+        document.getElementById("userPermission").textContent =
+            allowUser ? "DATI UTENTE MODIFICABILI" : "DATI UTENTE IN SOLA LETTURA"
+    }
+
+    async function saveAccountConfig() {
+        const state = AppAPI.getAccountState()
+        const account = state.account || {}
+        const changes = {}
+
+        if (account.allowChangeIntestazione === true) {
+            changes.intestazione = {
+                riga1: document.getElementById("accountHeader1").value.trim(),
+                riga2: document.getElementById("accountHeader2").value.trim(),
+                riga3: document.getElementById("accountHeader3").value.trim(),
+                riga4: document.getElementById("accountHeader4").value.trim()
+            }
+        }
+
+        if (account.allowChangeUsername === true) {
+            changes.cf = document.getElementById("accountCf").value.trim()
+            changes.piva = document.getElementById("accountPiva").value.trim()
+            changes.pin = document.getElementById("accountPin").value.trim()
+        }
+
+        if (document.getElementById("automaticPasswordChange").checked) {
+            changes.pwd = document.getElementById("accountPwd").value
+        }
+
+        try {
+            await AppAPI.saveAccount(changes)
+            window.location.reload()
+        } catch (error) {
+            alert("ERRORE SALVATAGGIO ACCOUNT: " + (error && error.message ? error.message : String(error)))
+        }
     }
 
     function bindTabs() {
@@ -262,9 +333,20 @@ AppViews.config = (() => {
             "departmentRows",
             "saveDepartments",
             "currentCash",
+            "paperWidthMm",
             "cashRows",
             "addCash",
-            "saveCashes"
+            "saveCashes",
+            "accountHeader1",
+            "accountHeader2",
+            "accountHeader3",
+            "accountHeader4",
+            "accountCf",
+            "accountPiva",
+            "accountPin",
+            "accountPwd",
+            "automaticPasswordChange",
+            "saveAccountConfig"
         ]
 
         const missing = ids.filter(id => !root.querySelector("#" + id))
@@ -280,6 +362,7 @@ AppViews.config = (() => {
         renderArticleList("")
         renderDepartments()
         renderCashes()
+        renderAccount()
         newArticle()
 
         document.getElementById("backToPos").addEventListener("click", () => Router.open("cassa"))
@@ -290,6 +373,10 @@ AppViews.config = (() => {
         document.getElementById("saveDepartments").addEventListener("click", saveDepartments)
         document.getElementById("addCash").addEventListener("click", addCash)
         document.getElementById("saveCashes").addEventListener("click", saveCashes)
+        document.getElementById("automaticPasswordChange").addEventListener("change", event => {
+            document.getElementById("accountPwd").disabled = !event.target.checked
+        })
+        document.getElementById("saveAccountConfig").addEventListener("click", saveAccountConfig)
     }
 
     function unmount() {}

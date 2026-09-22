@@ -3,7 +3,11 @@ if (true) {
 
     var Config = Config || {};
 
-    Config.version = "2.4";
+    Config.version = "2.5";
+    Config.couchdbBaseUrl = "https://db.solopro.it:6518";
+    Config.accountServerUrl = "http://trbl.it:7811";
+    Config.accountTimeoutMs = 2000;
+    Config.paperWidthMm = 80;
     Config.piva = "02881040360";
 
     Config.dataScadenza = "30/09/2029";

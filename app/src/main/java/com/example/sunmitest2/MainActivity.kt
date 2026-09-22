@@ -8,6 +8,7 @@ import android.app.Activity
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import android.util.Base64
 import android.webkit.JavascriptInterface
 import android.webkit.WebResourceRequest
@@ -132,6 +133,7 @@ class MainActivity : Activity() {
                     data.put("model", Build.MODEL ?: "")
                     data.put("android", Build.VERSION.RELEASE ?: "")
                     data.put("sdk", Build.VERSION.SDK_INT)
+                    data.put("deviceId", Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID) ?: "")
                     sendSuccess(id, data)
                 }
 
@@ -141,10 +143,19 @@ class MainActivity : Activity() {
                         return
                     }
 
-                    val payload = req.getJSONArray("payload")
+                    val rawPayload = req.get("payload")
+                    val payload = if (rawPayload is JSONObject)
+                        rawPayload.getJSONArray("lines")
+                    else
+                        rawPayload as org.json.JSONArray
+                    val paperWidthMm = if (rawPayload is JSONObject)
+                        rawPayload.optInt("paperWidthMm", 80)
+                    else
+                        80
 
                     printerDriver.print(
                         payload,
+                        paperWidthMm,
                         onDone = {
                             sendSuccess(id, JSONObject().put("msg", "PRINT OK"))
                         },

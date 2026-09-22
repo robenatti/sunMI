@@ -62,7 +62,15 @@
 
     <section id="cashesPanel" class="config-panel">
         <div class="cash-editor">
-            <label>CASSA DI QUESTO DISPOSITIVO<select id="currentCash"></select></label>
+            <div class="form-row">
+                <label>CASSA DI QUESTO DISPOSITIVO<select id="currentCash"></select></label>
+                <label>LARGHEZZA CARTA
+                    <select id="paperWidthMm">
+                        <option value="80">80 mm</option>
+                        <option value="58">58 mm</option>
+                    </select>
+                </label>
+            </div>
             <div id="cashRows"></div>
             <div class="cash-actions">
                 <button class="btn" id="addCash">AGGIUNGI CASSA</button>
@@ -73,26 +81,30 @@
 
     <section id="passwordPanel" class="config-panel">
         <div class="password-editor">
-            <div class="password-zone">
-                <div class="password-zone-title">PASSWORD MODIFICATA DAL SITO</div>
-                <label>PASSWORD<input type="password" disabled></label>
-                <button class="btn save-button" type="button" disabled>SALVA</button>
-                <div class="password-demo-note">Funzione non disponibile nella demo</div>
+            <div class="password-columns">
+                <div class="password-zone">
+                    <div class="password-zone-title">DATI INTESTAZIONE</div>
+                    <label>RIGA 1<input id="accountHeader1"></label>
+                    <label>RIGA 2<input id="accountHeader2"></label>
+                    <label>RIGA 3<input id="accountHeader3"></label>
+                    <label>RIGA 4<input id="accountHeader4"></label>
+                    <div id="headerPermission" class="password-demo-note"></div>
+                </div>
+
+                <div class="password-zone">
+                    <div class="password-zone-title">DATI UTENTE</div>
+                    <label>CODICE FISCALE<input id="accountCf"></label>
+                    <label>PARTITA IVA<input id="accountPiva"></label>
+                    <label>PIN<input id="accountPin"></label>
+                    <label>PASSWORD<input id="accountPwd" type="password" disabled></label>
+                    <label class="check-line password-auto-check">
+                        <input id="automaticPasswordChange" type="checkbox"> CAMBIO PASSWORD
+                    </label>
+                    <div id="userPermission" class="password-demo-note"></div>
+                </div>
             </div>
 
-            <div class="password-zone">
-                <div class="password-zone-title">CAMBIO PASSWORD DA APP</div>
-                <label>PASSWORD VECCHIA<input type="password" disabled></label>
-                <label>NUOVA PASSWORD<input type="password" disabled></label>
-                <label>CONFERMA NUOVA PASSWORD<input type="password" disabled></label>
-                <button class="btn save-button" type="button" disabled>SALVA</button>
-                <div class="password-demo-note">Funzione non disponibile nella demo</div>
-            </div>
-
-            <div class="password-zone">
-                <div class="password-zone-title">CAMBIO AUTOMATICO</div>
-                <label class="check-line password-auto-check"><input id="automaticPasswordChange" type="checkbox"> CAMBIO AUTOMATICO PASSWORD</label>
-            </div>
+            <button class="btn save-button config-save-fixed" id="saveAccountConfig" type="button">SALVA</button>
         </div>
     </section>
 </div>

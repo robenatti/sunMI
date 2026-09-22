@@ -72,8 +72,12 @@ const CloseDay = (() => {
 
     async function print(giorno, selectedCasse) {
         const summary = await AppAPI.getDailySummary(giorno, selectedCasse);
+        const device = await AppAPI.getDeviceConfig();
         const payload = render(summary, giorno);
-        await Bridge.exec("print", payload, 15000);
+        await Bridge.exec("print", {
+            lines: payload,
+            paperWidthMm: Number(device.paperWidthMm || Config.paperWidthMm || 80)
+        }, 15000);
         return summary;
     }
 

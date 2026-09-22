@@ -150,3 +150,31 @@
     padding: 0.55rem 0;
     border-bottom: 1px solid #242933;
 }
+
+
+.receipt-table tbody tr.receipt-fiscal-pending {
+    background: #5a1717;
+}
+
+.receipt-table tbody tr.receipt-fiscal-pending:active {
+    background: #6d1d1d;
+}
+
+.receipt-table tbody tr.receipt-annulled td {
+    text-decoration: line-through;
+    opacity: 0.55;
+}
+
+.receipt-action-button {
+    min-width: 2.8rem;
+    padding: 0.35rem 0.55rem;
+    border: 1px solid #5a6573;
+    border-radius: 0.35rem;
+    background: #242933;
+    color: #ffffff;
+    font-weight: 700;
+}
+
+.receipt-action-button:disabled {
+    opacity: 0.35;
+}

@@ -50,6 +50,12 @@ function renderReceiptIT(r) {
         out.push({ text: `DOCUMENTO N. ${r.fiscal.numero}`, align: "center" });
     }
 
+    if (r.fiscalStatus && r.fiscalStatus !== "OK") {
+        out.push({ separator: true });
+        out.push({ text: "DOCUMENTO PROVVISORIO", align: "center", bold: true });
+        out.push({ text: "NON ANCORA FISCALIZZATO", align: "center", bold: true });
+    }
+
     out.push({ text: "Documento Commerciale Online", align: "center" });
     out.push({ newline: 1 });
     out.push({ text: "ARRIVEDERCI E GRAZIE", align: "center", bold: true });
@@ -115,6 +121,12 @@ function renderReceiptAL(r) {
         if (r.fiscal.link) {
             out.push({ qrcode: r.fiscal.link });
         }
+    }
+
+    if (r.fiscalStatus && r.fiscalStatus !== "OK") {
+        out.push({ separator: true });
+        out.push({ text: "DOKUMENT I PERKOHSHËM", align: "center", bold: true });
+        out.push({ text: "ENDE I PAFISKALIZUAR", align: "center", bold: true });
     }
 
     out.push({ newline: 1 });

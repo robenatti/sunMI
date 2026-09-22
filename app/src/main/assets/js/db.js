@@ -6,6 +6,7 @@ const DB = (() => {
     let dbNames = null
     let remotes = null
     let syncHandles = []
+    let syncState = {}
     let initialized = false
     let initPromise = null
 
@@ -104,10 +105,21 @@ const DB = (() => {
         if (!remotes) return
 
         await Promise.all(Object.keys(dbs).map(async key => {
+            const replication = dbs[key].replicate.from(remotes[key])
+            let timer = null
+
             try {
-                await dbs[key].replicate.from(remotes[key])
+                await Promise.race([
+                    replication,
+                    new Promise((resolve, reject) => {
+                        timer = setTimeout(() => reject(new Error("Timeout replica iniziale")), 2500)
+                    })
+                ])
             } catch (e) {
+                if (replication && typeof replication.cancel === "function") replication.cancel()
                 console.warn("Replica iniziale non disponibile", key, e)
+            } finally {
+                if (timer) clearTimeout(timer)
             }
         }))
     }
@@ -116,9 +128,47 @@ const DB = (() => {
         if (!remotes) return
 
         Object.keys(dbs).forEach(key => {
+            syncState[key] = {
+                status: "STARTING",
+                lastOk: "",
+                error: ""
+            }
+
             const handle = dbs[key].sync(remotes[key], {
                 live: true,
                 retry: true
+            })
+
+            handle.on("active", () => {
+                syncState[key].status = "ACTIVE"
+                syncState[key].error = ""
+            })
+
+            handle.on("change", () => {
+                syncState[key].status = "ACTIVE"
+                syncState[key].lastOk = new Date().toISOString()
+                syncState[key].error = ""
+            })
+
+            handle.on("paused", error => {
+                if (error) {
+                    syncState[key].status = "PAUSED"
+                    syncState[key].error = error.message || String(error)
+                } else {
+                    syncState[key].status = "OK"
+                    syncState[key].lastOk = new Date().toISOString()
+                    syncState[key].error = ""
+                }
+            })
+
+            handle.on("denied", error => {
+                syncState[key].status = "DENIED"
+                syncState[key].error = error && error.message ? error.message : String(error || "")
+            })
+
+            handle.on("error", error => {
+                syncState[key].status = "ERROR"
+                syncState[key].error = error && error.message ? error.message : String(error || "")
             })
 
             syncHandles.push(handle)
@@ -153,16 +203,42 @@ const DB = (() => {
             await dbs.config.put(configDoc)
         }
 
+        let deviceDoc = null
+
         try {
-            await dbs.config.get("_local/device")
+            deviceDoc = await dbs.config.get("_local/device")
         } catch (e) {
             if (e.status !== 404) throw e
-
-            await dbs.config.put({
-                _id: "_local/device",
-                superConnect: Number(Config.superConnect || 1)
-            })
         }
+
+        const accountState = typeof Account !== "undefined" ? Account.getState() : {}
+        const accountDevice = accountState && accountState.device ? accountState.device : null
+
+        const superConnect = accountDevice && (accountDevice.cassa || accountDevice.superConnect)
+            ? Number(accountDevice.cassa || accountDevice.superConnect)
+            : Number(deviceDoc && deviceDoc.superConnect || Config.superConnect || 1)
+
+        const paperWidthMm = accountDevice && accountDevice.paperWidthMm
+            ? (Number(accountDevice.paperWidthMm) <= 58 ? 58 : 80)
+            : (Number(deviceDoc && deviceDoc.paperWidthMm || Config.paperWidthMm || 80) <= 58 ? 58 : 80)
+
+        const nextDevice = Object.assign({}, deviceDoc || {}, {
+            _id: "_local/device",
+            deviceId: accountState && accountState.deviceId
+                ? accountState.deviceId
+                : String(deviceDoc && deviceDoc.deviceId || ""),
+            superConnect: superConnect,
+            paperWidthMm: paperWidthMm
+        })
+
+        if (deviceDoc && deviceDoc._rev) nextDevice._rev = deviceDoc._rev
+
+        const deviceChanged = !deviceDoc ||
+            String(deviceDoc.deviceId || "") !== String(nextDevice.deviceId || "") ||
+            Number(deviceDoc.superConnect || 1) !== Number(nextDevice.superConnect) ||
+            Number(deviceDoc.paperWidthMm || 80) !== Number(nextDevice.paperWidthMm)
+
+        if (deviceChanged) await dbs.config.put(nextDevice)
 
         const info = await dbs.articoli.info()
 
@@ -236,7 +312,7 @@ const DB = (() => {
 
         const info = await withTimeout(
             remotes.config.info(),
-            3500,
+            2000,
             "Timeout connessione CouchDB"
         )
 
@@ -338,8 +414,35 @@ const DB = (() => {
     }
 
     async function saveReceipt(receipt) {
-        const result = await dbs.receipt.put(receipt)
-        return Object.assign({}, receipt, { _rev: result.rev })
+        const doc = Object.assign({}, receipt)
+
+        if (!doc._rev && doc._id) {
+            try {
+                const current = await dbs.receipt.get(doc._id)
+                doc._rev = current._rev
+            } catch (e) {
+                if (e.status !== 404) throw e
+            }
+        }
+
+        const result = await dbs.receipt.put(doc)
+        return Object.assign({}, doc, { _rev: result.rev })
+    }
+
+    function normalizeReceipt(doc) {
+        if (!doc) return doc
+
+        const copy = Object.assign({}, doc)
+
+        if (!copy.fiscalStatus) {
+            const numero = copy.fiscal && copy.fiscal.numero ? String(copy.fiscal.numero) : ""
+            copy.fiscalStatus = numero && numero !== "Servizio Non Disponibile" ? "OK" : "ERROR"
+        }
+
+        if (!copy.printStatus) copy.printStatus = "OK"
+        if (typeof copy.annullata === "undefined") copy.annullata = false
+
+        return copy
     }
 
     async function getReceiptsByDay(giorno) {
@@ -350,12 +453,47 @@ const DB = (() => {
         })
 
         return result.rows
-            .map(row => row.doc)
+            .map(row => normalizeReceipt(row.doc))
             .filter(doc => doc && doc.documento === "Ricevuta")
     }
 
     async function getReceipt(id) {
-        return dbs.receipt.get(id)
+        return normalizeReceipt(await dbs.receipt.get(id))
+    }
+
+    async function getPendingFiscalReceipts() {
+        const result = await dbs.receipt.allDocs({ include_docs: true })
+
+        return result.rows
+            .map(row => normalizeReceipt(row.doc))
+            .filter(doc =>
+                doc &&
+                doc.documento === "Ricevuta" &&
+                doc.annullata !== true &&
+                doc.fiscalStatus !== "OK"
+            )
+            .sort((a, b) => String(a.timestamp || "").localeCompare(String(b.timestamp || "")))
+    }
+
+    function getReplicationStatus() {
+        return JSON.parse(JSON.stringify(syncState || {}))
+    }
+
+    async function auditReplication(key) {
+        if (!remotes || !remotes[key]) throw new Error("Replica remota non configurata: " + key)
+
+        const state = syncState[key] || { status: "STARTING", lastOk: "", error: "" }
+
+        if (state.status === "ERROR" || state.status === "DENIED") {
+            throw new Error(state.status + (state.error ? " - " + state.error : ""))
+        }
+
+        return {
+            message:
+                state.status +
+                (state.lastOk ? " - ultimo OK " + state.lastOk : "") +
+                (state.error ? " - " + state.error : "")
+        }
     }
 
     return {
@@ -372,6 +510,9 @@ const DB = (() => {
         nextReceiptNumber,
         saveReceipt,
         getReceiptsByDay,
-        getReceipt
+        getReceipt,
+        getPendingFiscalReceipts,
+        getReplicationStatus,
+        auditReplication
     }
 })()

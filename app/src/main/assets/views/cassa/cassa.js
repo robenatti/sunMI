@@ -382,12 +382,24 @@ AppViews.cassa = (() => {
         unsubscribers.push(AppAPI.on("barcode:notfound", detail => alert("Barcode non trovato: " + detail.code)));
         unsubscribers.push(AppAPI.on("pos:payment:start", () => showProgress("Preparazione scontrino...", 10)));
         unsubscribers.push(AppAPI.on("pos:fiscal:start", () => showProgress("Collegamento al cassetto fiscale...", 30)));
-        unsubscribers.push(AppAPI.on("pos:fiscal:end", () => showProgress("Documento registrato...", 60)));
+        unsubscribers.push(AppAPI.on("pos:fiscal:end", detail => {
+            if (detail && detail.error) {
+                showProgress("Fiscalizzazione non disponibile. Stampa documento provvisorio...", 60, true);
+            } else {
+                showProgress("Documento registrato...", 60);
+            }
+        }));
         unsubscribers.push(AppAPI.on("pos:print:start", () => showProgress("Stampa in corso...", 80)));
         unsubscribers.push(AppAPI.on("pos:print:end", () => showProgress("Operazione completata", 100)));
         unsubscribers.push(AppAPI.on("pos:print:error", detail => showProgress("Vendita registrata. Errore stampa: " + detail.message, 100, true)));
         unsubscribers.push(AppAPI.on("pos:payment:end", detail => {
-            if (!detail.printError) setTimeout(() => document.getElementById("progressPopup").classList.remove("show", "error"), 500);
+            if (detail.fiscalError) {
+                showProgress("Ricevuta salvata. Fiscalizzazione in attesa: nuovo tentativo automatico.", 100, true);
+                return;
+            }
+
+            if (!detail.printError)
+                setTimeout(() => document.getElementById("progressPopup").classList.remove("show", "error"), 500);
         }));
         unsubscribers.push(AppAPI.on("pos:error", detail => showProgress(detail.message || "Errore", 100, true)));
     }

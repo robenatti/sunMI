@@ -33,6 +33,7 @@ const AppAPI = (() => {
             posUnsubscribers.push(POS.on(name, detail => emit("pos:" + name, detail)));
         });
         Barcode.start();
+        POS.startRecovery();
         initialized = true;
     }
 
@@ -133,10 +134,33 @@ const AppAPI = (() => {
         return { config: clone(result[0]), device: clone(result[1]) };
     }
 
-    async function saveCasse(casse, superConnect) {
+    async function saveCasse(casse, superConnect, paperWidthMm) {
         await Catalog.saveCasse(casse);
-        await DB.saveDeviceConfig({ superConnect: Number(superConnect || 1) });
+        await DB.saveDeviceConfig({
+            superConnect: Number(superConnect || 1),
+            paperWidthMm: Number(paperWidthMm || 80) <= 58 ? 58 : 80
+        });
         return getConfig();
+    }
+
+    async function getDeviceConfig() {
+        return clone(await DB.getDeviceConfig());
+    }
+
+    async function retryReceipt(id) {
+        return POS.retryReceipt(id);
+    }
+
+    async function cancelReceipt(id) {
+        return POS.cancelReceipt(id);
+    }
+
+    function getAccountState() {
+        return Account.getState();
+    }
+
+    async function saveAccount(changes) {
+        return Account.updateAccount(changes);
     }
 
     function getCasse() {
@@ -170,7 +194,12 @@ const AppAPI = (() => {
         getConfig,
         saveCasse,
         getCasse,
-        getDailySummary
+        getDailySummary,
+        getDeviceConfig,
+        retryReceipt,
+        cancelReceipt,
+        getAccountState,
+        saveAccount
     };
 })();
 
@@ -230,6 +259,7 @@ window.SystemAudit = (() => {
         const required = [
             ["Config", typeof Config !== "undefined"],
             ["Bridge Android", typeof Bridge !== "undefined"],
+            ["Account", typeof Account !== "undefined"],
             ["Receipt renderer", typeof renderReceiptIT === "function"],
             ["DB", typeof DB !== "undefined"],
             ["Catalog", typeof Catalog !== "undefined"],
@@ -259,7 +289,12 @@ window.SystemAudit = (() => {
             last = await Bridge.auditHardware(1200);
             if (last.mock) return { warning: "bridge mock browser - hardware non verificabile" };
             if (last.androidBridge && last.printerService && last.printerDriver) {
-                return { message: (last.manufacturer || "SUNMI") + " " + (last.model || "") + " / stampante pronta" };
+                const device = await DB.getDeviceConfig();
+                return {
+                    message:
+                        (last.manufacturer || "SUNMI") + " " + (last.model || "") +
+                        " / stampante pronta / " + Number(device.paperWidthMm || 80) + "mm"
+                };
             }
             await delay(300);
         }
@@ -333,6 +368,43 @@ window.SystemAudit = (() => {
         });
         if (!step.ok) failures++;
 
+        let accountResult = null;
+        step = await runStep("Account locale", async () => {
+            accountResult = await Account.init();
+            const state = Account.getState();
+
+            if (accountResult.warning) {
+                return {
+                    warning:
+                        (state.account ? "cache locale attiva" : "nessun account locale") +
+                        " - " + accountResult.warning
+                };
+            }
+
+            return {
+                message:
+                    (state.account && state.account.salone ? state.account.salone : "fallback locale") +
+                    (state.lastAccountUpdate ? " - aggiornato " + state.lastAccountUpdate : "")
+            };
+        });
+        if (!step.ok) failures++;
+
+        if (accountResult && accountResult.changed) {
+            BootTerminal.ready("CONFIGURAZIONE ACCOUNT AGGIORNATA - RIAVVIO");
+            running = false;
+            window.location.reload();
+            return;
+        }
+
+        step = await runStep("Device ID", async () => {
+            const state = Account.getState();
+            if (!state.deviceId) throw new Error("Device ID non disponibile");
+            return { message: state.deviceId };
+        });
+        if (!step.ok) failures++;
+
+        await runStep("Server account", () => Account.checkServer(), { warning: true });
+
         let dbReady = false;
         step = await runStep("Database locale", async () => {
             await DB.init();
@@ -341,8 +413,15 @@ window.SystemAudit = (() => {
             return result;
         });
         if (!step.ok) failures++;
-        if (dbReady) await runStep("CouchDB remoto", () => DB.auditRemote(), { warning: true });
-        else BootTerminal.warn("CouchDB remoto - non verificato perché il DB locale non è disponibile");
+        if (dbReady) {
+            await runStep("Server database", () => DB.auditRemote(), { warning: true });
+            await runStep("Replica articoli", () => DB.auditReplication("articoli"), { warning: true });
+            await runStep("Replica configurazione", () => DB.auditReplication("config"), { warning: true });
+            await runStep("Replica ricevute", () => DB.auditReplication("receipt"), { warning: true });
+        } else {
+            BootTerminal.warn("Server database - non verificato perché il DB locale non è disponibile");
+            BootTerminal.warn("Repliche - non verificate perché il DB locale non è disponibile");
+        }
 
         step = await runStep("Configurazione POS", async () => {
             if (!dbReady) throw new Error("Database non disponibile");

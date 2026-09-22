@@ -47,12 +47,13 @@ AppViews.riepilogo = (() => {
             box.appendChild(line)
         })
 
-        if (receipt.fiscal && receipt.fiscal.numero) {
-            const fiscal = document.createElement("div")
-            fiscal.className = "detail-fiscal"
-            fiscal.textContent = "Fiscale: " + receipt.fiscal.numero
-            box.appendChild(fiscal)
-        }
+        const status = document.createElement("div")
+        status.className = "detail-fiscal"
+        status.textContent =
+            "Fiscale: " + (receipt.fiscalStatus === "OK" ? (receipt.fiscal && receipt.fiscal.numero || "OK") : "DA FISCALIZZARE") +
+            " · Stampa: " + (receipt.printStatus || "N/D") +
+            (receipt.annullata ? " · ANNULLATA" : "")
+        box.appendChild(status)
     }
 
     function addPdfButton(tr, receipt) {
@@ -89,6 +90,57 @@ AppViews.riepilogo = (() => {
         tr.appendChild(td)
     }
 
+    function addRetryButton(tr, receipt) {
+        const td = document.createElement("td")
+        const button = document.createElement("button")
+
+        button.type = "button"
+        button.className = "receipt-action-button"
+        button.textContent = "↻"
+        button.disabled = receipt.annullata === true
+
+        button.addEventListener("click", async event => {
+            event.stopPropagation()
+            button.disabled = true
+
+            try {
+                await AppAPI.retryReceipt(receipt._id)
+            } finally {
+                await refresh()
+            }
+        })
+
+        td.appendChild(button)
+        tr.appendChild(td)
+    }
+
+    function addCancelButton(tr, receipt) {
+        const td = document.createElement("td")
+        const button = document.createElement("button")
+
+        button.type = "button"
+        button.className = "receipt-action-button"
+        button.textContent = "X"
+        button.disabled = receipt.annullata === true
+
+        button.addEventListener("click", async event => {
+            event.stopPropagation()
+
+            if (!confirm("Confermi annullamento ricevuta?")) return
+
+            button.disabled = true
+
+            try {
+                await AppAPI.cancelReceipt(receipt._id)
+            } finally {
+                await refresh()
+            }
+        })
+
+        td.appendChild(button)
+        tr.appendChild(td)
+    }
+
     async function refresh() {
         const day = document.getElementById("summaryDate").value.replace(/-/g, "")
         const data = await AppAPI.getDailySummary(day, selectedCasse())
@@ -106,6 +158,9 @@ AppViews.riepilogo = (() => {
         data.receipts.forEach(receipt => {
             const tr = document.createElement("tr")
 
+            if (receipt.fiscalStatus !== "OK") tr.classList.add("receipt-fiscal-pending")
+            if (receipt.annullata === true) tr.classList.add("receipt-annulled")
+
             ;[
                 receipt.ora || "",
                 String(receipt.superConnect || 1),
@@ -118,6 +173,8 @@ AppViews.riepilogo = (() => {
             })
 
             addPdfButton(tr, receipt)
+            addRetryButton(tr, receipt)
+            addCancelButton(tr, receipt)
 
             tr.addEventListener("click", () => renderDetail(receipt))
             body.appendChild(tr)

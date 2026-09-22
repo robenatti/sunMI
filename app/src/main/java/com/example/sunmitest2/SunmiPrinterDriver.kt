@@ -16,16 +16,34 @@ class SunmiPrinterDriver(
     private val activity: Activity
 ) {
 
-    // ===== PROPORZIONI FISSE 80mm =====
-    private val WIDTHS_ALL = 47   // descrizione / iva / prezzo
-    private val WIDTHS_3 = intArrayOf(31, 5, 11)   // descrizione / iva / prezzo
-    private val ALIGN_3  = intArrayOf(0, 1, 2)
+    private data class PrintProfile(
+        val totalWidth: Int,
+        val widths3: IntArray,
+        val widths2: IntArray
+    )
 
-    private val WIDTHS_2 = intArrayOf(31, 16)      // label / valore
-    private val ALIGN_2  = intArrayOf(0, 2)
+    private val ALIGN_3 = intArrayOf(0, 1, 2)
+    private val ALIGN_2 = intArrayOf(0, 2)
+
+    private fun profileFor(paperWidthMm: Int): PrintProfile {
+        return if (paperWidthMm <= 58) {
+            PrintProfile(
+                totalWidth = 32,
+                widths3 = intArrayOf(18, 4, 10),
+                widths2 = intArrayOf(20, 12)
+            )
+        } else {
+            PrintProfile(
+                totalWidth = 47,
+                widths3 = intArrayOf(31, 5, 11),
+                widths2 = intArrayOf(31, 16)
+            )
+        }
+    }
 
     fun print(
         lines: JSONArray,
+        paperWidthMm: Int = 80,
         onDone: () -> Unit,
         onError: (Exception) -> Unit
     ) {
@@ -38,6 +56,8 @@ class SunmiPrinterDriver(
         }
 
         try {
+
+            val profile = profileFor(paperWidthMm)
 
             svc.printerInit(callback)
 
@@ -90,11 +110,11 @@ class SunmiPrinterDriver(
                     val cols = Array(arr.length()) { arr.getString(it) }
 
                     when (cols.size) {
-                        3 -> svc.printColumnsText(cols, WIDTHS_3, ALIGN_3, callback)
-                        2 -> svc.printColumnsText(cols, WIDTHS_2, ALIGN_2, callback)
+                        3 -> svc.printColumnsText(cols, profile.widths3, ALIGN_3, callback)
+                        2 -> svc.printColumnsText(cols, profile.widths2, ALIGN_2, callback)
                         else -> svc.printColumnsText(
                             cols,
-                            IntArray(cols.size) { 48 / cols.size },
+                            IntArray(cols.size) { profile.totalWidth / cols.size },
                             IntArray(cols.size) { 0 },
                             callback
                         )
@@ -105,7 +125,7 @@ class SunmiPrinterDriver(
 
                 // ===== SEPARATOR =====
                 if (line.optBoolean("separator", false)) {
-                    svc.printText("-".repeat(47) + "\n", callback)
+                    svc.printText("-".repeat(profile.totalWidth) + "\n", callback)
                     continue
                 }
 

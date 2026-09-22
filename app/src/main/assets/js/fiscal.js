@@ -13,11 +13,13 @@ const Fiscal = (() => {
     async function prepareIT() {
         const paramS = "action=prepare&idc=" + encodeURIComponent(getIdc())
         const res = await fetch(urlIT + "?" + paramS)
+        if (!res.ok) throw new Error("HTTP " + res.status)
         return res.json()
     }
 
     async function fiscalizeIT(receipt) {
         const payload = {
+            _id: receipt._id,
             totale: receipt.totale.toString().replace(".", ","),
             mp: receipt.mp === "CC" ? "POS" : "CONTANTI",
             servizi: receipt.righe
@@ -28,8 +30,15 @@ const Fiscal = (() => {
             "&receipt=" + encodeURIComponent(JSON.stringify(payload))
 
         const res = await fetch(urlIT + "?" + paramS)
+        if (!res.ok) throw new Error("HTTP " + res.status)
+
         const json = await res.json()
+        if (!json || json.result !== "OK")
+            throw new Error(json && (json.error || json.return) ? String(json.error || json.return) : "Servizio fiscale non disponibile")
+
         const fisc = json.return && json.return.fiscAL ? json.return.fiscAL : {}
+        if (!fisc.documento_numero)
+            throw new Error("Risposta fiscale priva di numero documento")
         const fileName = fisc.fileName || ""
         const contentB64 = json.return && json.return.contentB64 ? json.return.contentB64 : ""
 
@@ -45,7 +54,7 @@ const Fiscal = (() => {
         }
 
         return {
-            numero: fisc.documento_numero || "Servizio Non Disponibile",
+            numero: fisc.documento_numero,
             firma: fisc.firma || "",
             link: fisc.link || "",
             data: fisc.data || "",

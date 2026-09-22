@@ -7,6 +7,9 @@ const POS = (() => {
     let listeners = new Map();
     let prepared = false;
     let paymentRunning = false;
+    let recoveryTimer = null;
+    let recoveryRunning = false;
+    let fiscalLocks = new Map();
 
     function clone(value) {
         return JSON.parse(JSON.stringify(value));
@@ -207,8 +210,146 @@ const POS = (() => {
             totale: roundMoney(total),
             totServizi: totServizi,
             totProdotti: totProdotti,
-            superConnect: superConnect
+            superConnect: superConnect,
+            fiscalStatus: "PENDING",
+            printStatus: "PENDING",
+            annullata: false,
+            lastFiscalError: "",
+            lastFiscalTry: "",
+            lastPrintError: "",
+            lastPrintTry: ""
         };
+    }
+
+    function errorMessage(error) {
+        return error && error.message ? error.message : String(error || "Errore")
+    }
+
+    async function fiscalizeStoredReceipt(receipt) {
+        if (!receipt || receipt.fiscalStatus === "OK") {
+            return { receipt: receipt, error: null }
+        }
+
+        const receiptId = String(receipt._id || "")
+        if (receiptId && fiscalLocks.has(receiptId))
+            return fiscalLocks.get(receiptId)
+
+        const work = (async () => {
+            receipt.fiscalStatus = "PENDING"
+            receipt.lastFiscalTry = new Date().toISOString()
+            receipt.lastFiscalError = ""
+            receipt = await DB.saveReceipt(receipt)
+
+            try {
+                const fiscal = await Fiscal.fiscalizeIT(receipt)
+                receipt.fiscal = fiscal
+                receipt.rCode = fiscal.numero || ""
+                receipt.fiscalStatus = "OK"
+                receipt.lastFiscalError = ""
+                receipt = await DB.saveReceipt(receipt)
+
+                return { receipt: receipt, error: null }
+            } catch (error) {
+                receipt.fiscalStatus = "ERROR"
+                receipt.lastFiscalError = errorMessage(error)
+                receipt = await DB.saveReceipt(receipt)
+
+                return { receipt: receipt, error: error }
+            }
+        })()
+
+        if (receiptId) fiscalLocks.set(receiptId, work)
+
+        try {
+            return await work
+        } finally {
+            if (receiptId) fiscalLocks.delete(receiptId)
+        }
+    }
+
+    async function printStoredReceipt(receipt) {
+        if (!receipt) return { receipt: receipt, error: new Error("Ricevuta non disponibile") }
+
+        receipt.printStatus = "PENDING"
+        receipt.lastPrintTry = new Date().toISOString()
+        receipt.lastPrintError = ""
+        receipt = await DB.saveReceipt(receipt)
+
+        try {
+            const device = await DB.getDeviceConfig()
+            const printData = renderReceiptIT(Object.assign({}, receipt, {
+                data: receipt.data,
+                ora: receipt.ora
+            }))
+
+            await Bridge.exec("print", {
+                lines: printData,
+                paperWidthMm: Number(device.paperWidthMm || Config.paperWidthMm || 80)
+            }, Config.printTimeoutMs || 60000)
+
+            receipt.printStatus = "OK"
+            receipt.lastPrintError = ""
+            receipt = await DB.saveReceipt(receipt)
+
+            return { receipt: receipt, error: null }
+        } catch (error) {
+            receipt.printStatus = "ERROR"
+            receipt.lastPrintError = errorMessage(error)
+            receipt = await DB.saveReceipt(receipt)
+
+            return { receipt: receipt, error: error }
+        }
+    }
+
+    async function retryReceipt(id) {
+        let receipt = await DB.getReceipt(id)
+        if (!receipt || receipt.annullata === true) return receipt
+
+        if (receipt.fiscalStatus !== "OK") {
+            const fiscalResult = await fiscalizeStoredReceipt(receipt)
+            receipt = fiscalResult.receipt
+        }
+
+        const printResult = await printStoredReceipt(receipt)
+        return printResult.receipt
+    }
+
+    async function cancelReceipt(id) {
+        let receipt = await DB.getReceipt(id)
+        receipt.annullata = true
+        receipt.annullataAt = new Date().toISOString()
+        return DB.saveReceipt(receipt)
+    }
+
+    async function retryPendingFiscalization() {
+        if (recoveryRunning) return
+        recoveryRunning = true
+
+        try {
+            const pending = await DB.getPendingFiscalReceipts()
+
+            for (const pendingReceipt of pending) {
+                const result = await fiscalizeStoredReceipt(pendingReceipt)
+
+                if (!result.error && result.receipt && result.receipt.fiscalStatus === "OK") {
+                    await printStoredReceipt(result.receipt)
+                }
+            }
+        } finally {
+            recoveryRunning = false
+        }
+    }
+
+    function startRecovery() {
+        if (recoveryTimer) return
+
+        setTimeout(() => {
+            retryPendingFiscalization().catch(() => {})
+        }, 3000)
+
+        recoveryTimer = setInterval(() => {
+            retryPendingFiscalization().catch(() => {})
+        }, 60000)
     }
 
     async function pay(tipo) {
@@ -223,40 +364,44 @@ const POS = (() => {
         emit("payment:start", { tipo: tipo, total: total });
 
         try {
-            const receipt = await buildReceipt(tipo);
-            emit("fiscal:start", { receipt: receipt });
-            const fiscal = await Fiscal.fiscalizeIT(receipt);
-            receipt.fiscal = fiscal;
-            receipt.rCode = fiscal.numero || "";
-            emit("fiscal:end", { receipt: receipt });
-            await DB.saveReceipt(receipt);
+            let receipt = await buildReceipt(tipo);
+
+            receipt = await DB.saveReceipt(receipt);
             emit("receipt:saved", { receipt: receipt });
 
-            const printData = renderReceiptIT(Object.assign({}, receipt, {
-                data: receipt.data,
-                ora: receipt.ora
-            }));
-            let printError = null;
+            emit("fiscal:start", { receipt: receipt });
+            const fiscalResult = await fiscalizeStoredReceipt(receipt);
+            receipt = fiscalResult.receipt;
+            emit("fiscal:end", {
+                receipt: receipt,
+                error: fiscalResult.error ? errorMessage(fiscalResult.error) : ""
+            });
 
-            try {
-                emit("print:start", { receipt: receipt });
-                await Bridge.exec("print", printData, Config.printTimeoutMs || 60000);
-                emit("print:end", { receipt: receipt });
-            } catch (error) {
-                printError = error;
+            emit("print:start", { receipt: receipt });
+            const printResult = await printStoredReceipt(receipt);
+            receipt = printResult.receipt;
+
+            if (printResult.error) {
                 emit("print:error", {
                     receipt: receipt,
-                    message: error && error.message ? error.message : String(error)
+                    message: errorMessage(printResult.error)
                 });
+            } else {
+                emit("print:end", { receipt: receipt });
             }
 
-            emit("payment:end", { receipt: receipt, printError: !!printError });
+            emit("payment:end", {
+                receipt: receipt,
+                fiscalError: !!fiscalResult.error,
+                printError: !!printResult.error
+            });
+
             reset();
             return receipt;
         } catch (error) {
             paymentRunning = false;
             emit("change", getState());
-            emit("error", { message: error && error.message ? error.message : String(error) });
+            emit("error", { message: errorMessage(error) });
             throw error;
         }
     }
@@ -271,6 +416,10 @@ const POS = (() => {
         duplicateItem: duplicateItem,
         addDiscount: addDiscount,
         reset: reset,
-        pay: pay
+        pay: pay,
+        retryReceipt: retryReceipt,
+        cancelReceipt: cancelReceipt,
+        retryPendingFiscalization: retryPendingFiscalization,
+        startRecovery: startRecovery
     };
 })();
