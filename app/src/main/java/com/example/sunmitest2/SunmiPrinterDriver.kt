@@ -29,7 +29,7 @@ class SunmiPrinterDriver(
         return if (paperWidthMm <= 58) {
             PrintProfile(
                 totalWidth = 31,
-                widths3 = intArrayOf(17, 4, 10),
+                widths3 = intArrayOf(18, 4, 9),
                 widths2 = intArrayOf(19, 12)
             )
         } else {
@@ -108,6 +108,10 @@ class SunmiPrinterDriver(
 
                     val arr = line.getJSONArray("columns")
                     val cols = Array(arr.length()) { arr.getString(it) }
+
+                    if (paperWidthMm <= 58 && cols.size == 3 && cols[2] == "PREZZO (€)") {
+                        cols[2] = "PREZZO €"
+                    }
 
                     when (cols.size) {
                         3 -> svc.printColumnsText(cols, profile.widths3, ALIGN_3, callback)
