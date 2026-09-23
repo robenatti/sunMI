@@ -93,6 +93,26 @@ class MainActivity : Activity() {
         webView.settings.mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
 
         webView.webChromeClient = object : WebChromeClient() {
+            override fun onJsAlert(
+                view: WebView?,
+                url: String?,
+                message: String?,
+                result: JsResult?
+            ): Boolean {
+                AlertDialog.Builder(this@MainActivity)
+                    .setMessage(message ?: "")
+                    .setPositiveButton("OK") { dialog, _ ->
+                        result?.confirm()
+                        dialog.dismiss()
+                    }
+                    .setOnCancelListener {
+                        result?.confirm()
+                    }
+                    .show()
+
+                return true
+            }
+
             override fun onJsConfirm(
                 view: WebView?,
                 url: String?,
