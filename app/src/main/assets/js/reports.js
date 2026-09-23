@@ -14,17 +14,19 @@ const Reports = (() => {
 
         receipts.sort((a, b) => String(b.timestamp || "").localeCompare(String(a.timestamp || "")))
 
+        const activeReceipts = receipts.filter(r => r.annullata !== true)
+
         const result = {
             totale: 0,
             contanti: 0,
             pos: 0,
             servizi: 0,
             prodotti: 0,
-            documenti: receipts.length,
+            documenti: activeReceipts.length,
             receipts: receipts
         }
 
-        receipts.forEach(r => {
+        activeReceipts.forEach(r => {
             const totale = Number(r.totale || 0)
             result.totale += totale
             result.servizi += Number(r.totServizi || 0)

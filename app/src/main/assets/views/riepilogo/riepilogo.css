@@ -164,6 +164,11 @@
     opacity: 0.55;
 }
 
+.receipt-table tbody tr.receipt-annulled td:nth-child(-n+4) {
+    text-decoration: line-through;
+    text-decoration-thickness: 2px;
+}
+
 .receipt-table tbody tr.receipt-annulled td::after {
     content: "";
     position: absolute;
