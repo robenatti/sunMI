@@ -115,6 +115,22 @@ var BootTerminal = (function () {
         }
     }
 
+    function warningSummary(message) {
+        var summary = el("bootSummary")
+        if (summary) {
+            summary.className = "boot-summary boot-warn"
+            summary.textContent = safeText(message)
+        }
+    }
+
+    function blockedSummary(message) {
+        var summary = el("bootSummary")
+        if (summary) {
+            summary.className = "boot-summary boot-fail"
+            summary.textContent = safeText(message)
+        }
+    }
+
     function failed(count) {
         var summary = el("bootSummary")
         if (summary) {
@@ -177,6 +193,8 @@ var BootTerminal = (function () {
         warn: warn,
         fail: fail,
         ready: ready,
+        warningSummary: warningSummary,
+        blockedSummary: blockedSummary,
         failed: failed,
         setTechnical: setTechnical,
         assetFailure: assetFailure,

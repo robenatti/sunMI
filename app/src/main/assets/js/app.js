@@ -448,36 +448,39 @@ window.SystemAudit = (() => {
         await runStep("Server account", () => Account.checkServer(), { warning: true });
 
         let expiryWarning = "";
-        step = await runStep("Scadenza software", async () => {
+        let expiryBlocked = false;
+
+        try {
             const status = expiryStatus();
 
             if (status.blocked) {
-                throw new Error(
-                    "SCADUTO DAL " + formatDate(status.blockDate) +
-                    " - data scadenza " + status.value
-                );
-            }
-
-            if (status.warning) {
+                expiryBlocked = true;
+                BootTerminal.fail("IL PROGRAMMA È SCADUTO");
+                BootTerminal.fail("CONTATTARE IL FORNITORE");
+            } else if (status.warning) {
                 expiryWarning =
-                    "SOFTWARE IN SCADENZA - " +
-                    status.value +
-                    " - " +
-                    status.daysRemaining +
-                    " giorni al blocco";
+                    "IL PROGRAMMA È IN SCADENZA\n" +
+                    "SCADENZA: " + status.value + "\n" +
+                    status.daysRemaining + " GIORNI AL BLOCCO";
 
-                return { warning: expiryWarning };
-            }
-
-            return {
-                message:
+                BootTerminal.warn("IL PROGRAMMA È IN SCADENZA");
+                BootTerminal.warn(
+                    "SCADENZA: " + status.value +
+                    " - " + status.daysRemaining + " GIORNI AL BLOCCO"
+                );
+            } else {
+                BootTerminal.ok(
+                    "Scadenza software - " +
                     status.value +
                     " - " +
                     status.daysRemaining +
                     " giorni al blocco"
-            };
-        });
-        if (!step.ok) failures++;
+                );
+            }
+        } catch (error) {
+            BootTerminal.fail("Scadenza software - " + messageOf(error), stackOf(error));
+            failures++;
+        }
 
         step = await runStep("Salone database", async () => {
             const salone = String(Config.salone || "").trim();
@@ -562,6 +565,22 @@ window.SystemAudit = (() => {
         if (!step.ok) failures++;
         failures += await auditViews();
 
+        if (failures === 0 && expiryBlocked) {
+            const expiredMessage =
+                "IL PROGRAMMA È SCADUTO\n" +
+                "CONTATTARE IL FORNITORE";
+
+            BootTerminal.blockedSummary(expiredMessage);
+            alert(expiredMessage);
+            running = false;
+            return;
+        }
+
+        if (failures === 0 && expiryWarning) {
+            BootTerminal.warningSummary(expiryWarning);
+            alert(expiryWarning);
+        }
+
         if (failures === 0) {
             step = await runStep("AppAPI", async () => {
                 await AppAPI.init();
@@ -580,7 +599,6 @@ window.SystemAudit = (() => {
 
         if (failures === 0) {
             BootTerminal.ready(manual ? "DIAGNOSTICA COMPLETATA" : "SYSTEM READY - avvio cassa");
-            if (expiryWarning && !manual) alert(expiryWarning);
             if (manual) keepManualDiagnostic(appView);
             else {
                 if (appView) appView.style.display = "";
