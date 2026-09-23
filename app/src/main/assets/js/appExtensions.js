@@ -56,7 +56,7 @@ const CloseDay = (() => {
         out.push({ separator: true });
         out.push({ columns: ["Totale Giornata EUR", formatAmount(summary.totale)], bold: true });
         out.push({ columns: ["di cui IVA", formatAmount(ivaTot)], bold: true });
-        out.push({ columns: ["Numero Scontrini Emessi", String(summary.documenti || 0)] });
+        out.push({ columns: ["Numero Scontrini", String(summary.documenti || 0)] });
         out.push({ newline: 2 });
         out.push({ text: "RIEPILOGO PAGAMENTI", align: "center" });
         out.push({ newline: 1 });
@@ -65,7 +65,7 @@ const CloseDay = (() => {
         out.push({ columns: ["Pagamento CONTANTI", formatAmount(summary.contanti)], bold: true });
         out.push({ newline: 2 });
         out.push({ text: "Stampa del " + stampata.data + " " + stampata.ora, align: "center" });
-        out.push({ cut: 10 });
+        out.push({ newline: 5 });
 
         return out;
     }
