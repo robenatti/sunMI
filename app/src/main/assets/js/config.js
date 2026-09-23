@@ -114,11 +114,20 @@ if (true) {
         reparti: ["", "PIEGA", "TAGLIO", "COLORE", "MECHES", "TRATTAMENTI", "UOMO", "ALTRO", "PRODOTTI"]
     }
 
-    Config.seedVersion = "bio-20260923-02";
+    Config.seedVersion = "bio-20260923-03";
 
     Config.seedBio = {
         reparti: ["","TUTTI","BIONAIF KIT","BIONAIF PLANTARI 1","BIONAIF PLANTARI 2","GOODLOOK","PEDISALUS","ZEN","VARIE"],
         listino: [
+        {"codice":"975071085","barcode":"8055519880010","prodotto":"KIT EQUILIBRIO BIONAIF: BG N°43-48 / KG 96-105 + RG N°43-48","prezzo":99,"iva":22,"tipo":"P","reparto":2,"posizione":1,"categoria":"BIONAIF KIT","marca":"BIONAIF"},
+        {"codice":"975071073","barcode":"8055519880027","prodotto":"KIT EQUILIBRIO BIONAIF: BM N°39-42 / KG 71-80 + RM N°39-42","prezzo":99,"iva":22,"tipo":"P","reparto":2,"posizione":2,"categoria":"BIONAIF KIT","marca":"BIONAIF"},
+        {"codice":"975071061","barcode":"8055519880034","prodotto":"KIT EQUILIBRIO BIONAIF: BP N°34-38 / KG 53-58 + RP N°34-38","prezzo":99,"iva":22,"tipo":"P","reparto":2,"posizione":3,"categoria":"BIONAIF KIT","marca":"BIONAIF"},
+        {"codice":"975071123","barcode":"8055519880041","prodotto":"KIT EQUILIBRIO BIONAIF: NG N°43-48 / KG >105 + RG N°43-48","prezzo":99,"iva":22,"tipo":"P","reparto":2,"posizione":4,"categoria":"BIONAIF KIT","marca":"BIONAIF"},
+        {"codice":"975071111","barcode":"8055519880058","prodotto":"KIT EQUILIBRIO BIONAIF: NM N°39-42 / KG >80 + RM N°39-42","prezzo":99,"iva":22,"tipo":"P","reparto":2,"posizione":5,"categoria":"BIONAIF KIT","marca":"BIONAIF"},
+        {"codice":"975071097","barcode":"8055519880065","prodotto":"KIT EQUILIBRIO BIONAIF: NP N°34-38 / KG >58 + RP N°34-38","prezzo":99,"iva":22,"tipo":"P","reparto":2,"posizione":6,"categoria":"BIONAIF KIT","marca":"BIONAIF"},
+        {"codice":"975071059","barcode":"8055519880072","prodotto":"KIT EQUILIBRIO BIONAIF: VG N°43-48 / KG","prezzo":99,"iva":22,"tipo":"P","reparto":2,"posizione":7,"categoria":"BIONAIF KIT","marca":"BIONAIF"},
+        {"codice":"975071046","barcode":"8055519880089","prodotto":"KIT EQUILIBRIO BIONAIF: VM N°39-42 / KG","prezzo":99,"iva":22,"tipo":"P","reparto":2,"posizione":8,"categoria":"BIONAIF KIT","marca":"BIONAIF"},
+        {"codice":"975071022","barcode":"8055519880096","prodotto":"KIT EQUILIBRIO BIONAIF: VP N°34-38 / KG","prezzo":99,"iva":22,"tipo":"P","reparto":2,"posizione":9,"categoria":"BIONAIF KIT","marca":"BIONAIF"},
         {"codice":"913176234","barcode":"8055519880102","prodotto":"PLANTARE ATTIVO BIONAIF BG. KG 96-105 - N°43-48 - BLU GRANDE","prezzo":69,"iva":22,"tipo":"P","reparto":3,"posizione":1,"categoria":"BIONAIF PLANTARI 1"},
         {"codice":"913176222","barcode":"8055519880119","prodotto":"PLANTARE ATTIVO BIONAIF BM. KG 71-80 - N°39-42 - BLU MEDIO","prezzo":69,"iva":22,"tipo":"P","reparto":3,"posizione":2,"categoria":"BIONAIF PLANTARI 1"},
         {"codice":"913176210","barcode":"8055519880126","prodotto":"PLANTARE ATTIVO BIONAIF BP. KG 53-58 - N°34-38 - BLU PICCOLO","prezzo":69,"iva":22,"tipo":"P","reparto":3,"posizione":3,"categoria":"BIONAIF PLANTARI 1"},
@@ -173,7 +182,9 @@ if (true) {
         {"codice":"13214605","barcode":"8055519884148","prodotto":"10 ML ALBA-KI ROLL-ON ZEN OLIO EUDERMICO","prezzo":10,"iva":22,"tipo":"P","reparto":7,"posizione":23,"categoria":"ZEN"},
         {"codice":"04214400","barcode":"8055519882953","prodotto":"PRANA - DIFFUSORE PORTATILE AD ULTRASUONI","prezzo":45,"iva":22,"tipo":"P","reparto":7,"posizione":24,"categoria":"ZEN"},
         {"codice":"04214301","barcode":"8055519883561","prodotto":"10 ML ZEN ROSEMARY SPIRIT OIL - OLIO ESSENZIALE DI ROSMARINO","prezzo":10,"iva":22,"tipo":"P","reparto":7,"posizione":25,"categoria":"ZEN"},
-        {"codice":"VARIE","barcode":"","prodotto":"VARIE","prezzo":1,"iva":22,"tipo":"P","reparto":8,"posizione":4,"categoria":"VARIE"}
+        {"codice":"VARIE","barcode":"","prodotto":"VARIE","prezzo":1,"iva":22,"tipo":"P","reparto":8,"posizione":4,"categoria":"VARIE"},
+        {"codice":"971223603","barcode":"8055519880256","prodotto":"PEDISALUS CREMA PIEDI 75 ML","prezzo":20,"iva":22,"tipo":"P","reparto":6,"posizione":1,"categoria":"PEDISALUS","marca":"PEDISALUS"},
+        {"codice":"PEDI+PIETRA","barcode":"8055519883455","prodotto":"KIT PEDISALUS 75 ML + PIETRA ESFOLIANTE","prezzo":20,"iva":22,"tipo":"P","reparto":6,"posizione":2,"categoria":"PEDISALUS","marca":"PEDISALUS"}
         ]
     }
 
