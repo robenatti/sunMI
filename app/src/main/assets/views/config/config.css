@@ -84,18 +84,30 @@
 .config-article-row {
     width: 100%;
     min-height: 3.8rem;
-    display: flex;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: 3.2rem 1fr 2.2rem 6rem;
+    gap: 0.6rem;
     align-items: center;
     background: #181b21;
     color: inherit;
     border: 0;
     border-bottom: 1px solid #2a2f38;
     padding: 0 0.7rem;
+    text-align: left;
 }
 
-.config-article-row span:last-child {
-    opacity: 0.6;
+.config-article-department,
+.config-article-type,
+.config-article-price {
+    opacity: 0.65;
+}
+
+.config-article-type {
+    text-align: center;
+}
+
+.config-article-price {
+    text-align: right;
 }
 
 .article-form {

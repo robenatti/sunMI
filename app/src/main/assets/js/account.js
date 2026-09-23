@@ -37,7 +37,6 @@ const Account = (() => {
         return String(now.getFullYear()) +
             pad(now.getMonth() + 1) +
             pad(now.getDate()) +
-            "T" +
             pad(now.getHours()) +
             pad(now.getMinutes()) +
             pad(now.getSeconds())

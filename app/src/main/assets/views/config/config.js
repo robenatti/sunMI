@@ -14,6 +14,8 @@ AppViews.config = (() => {
     function renderArticleList(text) {
         const container = document.getElementById("configArticleList")
         const list = AppAPI.searchAllArticoli(text || "")
+            .slice()
+            .sort((a, b) => String(a.nome || "").localeCompare(String(b.nome || ""), "it"))
         container.innerHTML = ""
 
         list.forEach(article => {
@@ -21,13 +23,26 @@ AppViews.config = (() => {
             button.type = "button"
             button.className = "config-article-row"
 
-            const name = document.createElement("span")
-            name.textContent = article.nome
-            const meta = document.createElement("span")
-            meta.textContent = article.tipo + " · R" + article.reparto + " · " + money(article.prezzo)
+            const reparto = document.createElement("span")
+            reparto.className = "config-article-department"
+            reparto.textContent = "R" + article.reparto
 
+            const name = document.createElement("span")
+            name.className = "config-article-name"
+            name.textContent = article.nome
+
+            const tipo = document.createElement("span")
+            tipo.className = "config-article-type"
+            tipo.textContent = article.tipo
+
+            const price = document.createElement("span")
+            price.className = "config-article-price"
+            price.textContent = money(article.prezzo)
+
+            button.appendChild(reparto)
             button.appendChild(name)
-            button.appendChild(meta)
+            button.appendChild(tipo)
+            button.appendChild(price)
             button.addEventListener("click", () => editArticle(article._id))
             container.appendChild(button)
         })
