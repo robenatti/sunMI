@@ -262,11 +262,10 @@ AppViews.config = (() => {
     function updatePasswordButtonState() {
         const state = AppAPI.getAccountState()
         const account = state.account || {}
-        const current = document.getElementById("accountPwd").value
         const first = document.getElementById("accountPassword1").value
         const second = document.getElementById("accountPassword2").value
         document.getElementById("changePassword").disabled =
-            account.allowChangePassword !== true || !current || !first || !second || first !== second
+            account.allowChangePassword !== true || !first || !second || first !== second
     }
 
     function renderAccount() {
@@ -286,7 +285,7 @@ AppViews.config = (() => {
         document.getElementById("accountCf").value = account.cf || ""
         document.getElementById("accountPiva").value = account.piva || ""
         document.getElementById("accountPin").value = account.pin || ""
-        document.getElementById("accountPwd").value = ""
+        document.getElementById("accountPwd").value = account.pwd || ""
         document.getElementById("accountPassword1").value = ""
         document.getElementById("accountPassword2").value = ""
 
@@ -348,11 +347,10 @@ AppViews.config = (() => {
         const account = state.account || {}
         if (account.allowChangePassword !== true) return
 
-        const current = document.getElementById("accountPwd").value
         const first = document.getElementById("accountPassword1").value
         const second = document.getElementById("accountPassword2").value
 
-        if (!current || !first || first !== second) {
+        if (!first || first !== second) {
             updatePasswordButtonState()
             return
         }
@@ -361,11 +359,10 @@ AppViews.config = (() => {
         button.disabled = true
 
         try {
-            await AppAPI.saveAccount({ pwd: current, nuovaPassword: first })
-            document.getElementById("accountPwd").value = ""
+            await AppAPI.saveAccount({ nuovaPassword: first })
             document.getElementById("accountPassword1").value = ""
             document.getElementById("accountPassword2").value = ""
-            updatePasswordButtonState()
+            renderAccount()
         } catch (error) {
             alert("ERRORE CAMBIO PASSWORD: " + (error && error.message ? error.message : String(error)))
             updatePasswordButtonState()
