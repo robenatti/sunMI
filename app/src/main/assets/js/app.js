@@ -415,7 +415,7 @@ window.SystemAudit = (() => {
         if (!step.ok) failures++;
         if (dbReady) {
             await runStep("Server database", () => DB.auditRemote(), { warning: true });
-            await runStep("Replica articoli", () => DB.auditReplication("articoli"), { warning: true });
+            await runStep("Replica magazzino", () => DB.auditReplication("magazzino"), { warning: true });
             await runStep("Replica configurazione", () => DB.auditReplication("config"), { warning: true });
             await runStep("Replica ricevute", () => DB.auditReplication("receipt"), { warning: true });
         } else {

@@ -90,6 +90,11 @@ const Catalog = (() => {
     }
 
     function getByReparto(reparto) {
+        const repartoConfig = getReparto(reparto)
+        if (repartoConfig && String(repartoConfig.nome || "").toUpperCase() === "TUTTI") {
+            return getAll()
+        }
+
         return articles
             .filter(a => a.attivo !== false && Number(a.reparto) === Number(reparto))
             .slice()
@@ -124,6 +129,7 @@ const Catalog = (() => {
         return source.filter(article => {
             const haystack = [
                 article.nome,
+                article.codice,
                 article.barcode,
                 article.categoria,
                 article.marca,

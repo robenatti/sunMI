@@ -56,13 +56,13 @@ const DB = (() => {
             const prefix = cleanName(Config.salone || Config.piva || "sunmi")
 
             dbNames = {
-                articoli: prefix + "-pos-articoli",
-                config: prefix + "-pos-config",
-                receipt: prefix + "-pos-receipt"
+                magazzino: prefix + "-magazzino",
+                config: prefix + "-config",
+                receipt: prefix + "-receipt"
             }
 
             dbs = {
-                articoli: new PouchDB(dbNames.articoli),
+                magazzino: new PouchDB(dbNames.magazzino),
                 config: new PouchDB(dbNames.config),
                 receipt: new PouchDB(dbNames.receipt)
             }
@@ -188,7 +188,7 @@ const DB = (() => {
             const reparti = (Config.reparti || []).slice(1).map((nome, index) => ({
                 id: index + 1,
                 nome: nome || ("R" + (index + 1)),
-                vista: "BOTTONI"
+                vista: String(nome || "").toUpperCase() === "TUTTI" ? "LISTA" : "BOTTONI"
             }))
 
             configDoc = {
@@ -240,11 +240,11 @@ const DB = (() => {
 
         if (deviceChanged) await dbs.config.put(nextDevice)
 
-        const info = await dbs.articoli.info()
+        const info = await dbs.magazzino.info()
 
         if (info.doc_count === 0 && Array.isArray(Config.listino)) {
             const docs = Config.listino.map((item, index) => {
-                const isProduct = Number(item.reparto) === 8
+                const isProduct = item.tipo === "P" || Number(item.reparto) === 8
 
                 return {
                     _id: "seed-" + String(index + 1).padStart(4, "0"),
@@ -255,6 +255,8 @@ const DB = (() => {
                     reparto: Number(item.reparto || 1),
                     posizione: Number(item.posizione || 1),
                     categoria: item.categoria || "",
+                    codice: String(item.codice || ""),
+                    iva: parseNumber(typeof item.iva !== "undefined" ? item.iva : 22),
                     barcode: item.barcode || "",
                     marca: item.marca || "",
                     fornitore: item.fornitore || "",
@@ -263,7 +265,7 @@ const DB = (() => {
             })
 
             if (docs.length) {
-                await dbs.articoli.bulkDocs(docs)
+                await dbs.magazzino.bulkDocs(docs)
             }
         }
     }
@@ -288,14 +290,14 @@ const DB = (() => {
         await dbs.config.remove(read)
 
         const infos = await Promise.all([
-            dbs.articoli.info(),
+            dbs.magazzino.info(),
             dbs.config.info(),
             dbs.receipt.info()
         ])
 
         return {
             message:
-                "R/W OK - articoli=" + infos[0].doc_count +
+                "R/W OK - magazzino=" + infos[0].doc_count +
                 " config=" + infos[1].doc_count +
                 " receipt=" + infos[2].doc_count
         }
@@ -360,7 +362,7 @@ const DB = (() => {
     }
 
     async function getAllArticles() {
-        const result = await dbs.articoli.allDocs({ include_docs: true })
+        const result = await dbs.magazzino.allDocs({ include_docs: true })
 
         return result.rows
             .map(row => row.doc)
@@ -368,7 +370,7 @@ const DB = (() => {
     }
 
     async function getArticle(id) {
-        return dbs.articoli.get(id)
+        return dbs.magazzino.get(id)
     }
 
     async function saveArticle(article) {
@@ -376,7 +378,7 @@ const DB = (() => {
 
         if (!doc._id) doc._id = uuid()
 
-        const result = await dbs.articoli.put(doc)
+        const result = await dbs.magazzino.put(doc)
         doc._rev = result.rev
 
         return doc
