@@ -287,7 +287,7 @@ AppViews.config = (() => {
         document.getElementById("accountPassword1").disabled = !allowPassword
         document.getElementById("accountPassword2").disabled = !allowPassword
         document.getElementById("headerPermission").textContent =
-            allowHeader ? "MODIFICA ABILITATA DAL SERVER" : "SOLA LETTURA"
+            allowHeader ? "DATI INTESTAZIONE MODIFICABILI" : "DATI INTESTAZIONE NON MODIFICABILI"
         document.getElementById("userPermission").textContent =
             allowUser ? "DATI UTENTE MODIFICABILI" : "DATI UTENTE IN SOLA LETTURA"
         document.getElementById("passwordPermission").textContent =
