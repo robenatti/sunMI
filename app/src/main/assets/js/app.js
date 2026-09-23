@@ -219,6 +219,48 @@ window.SystemAudit = (() => {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
 
+    function parseExpiry(value) {
+        const match = String(value || "").match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+        if (!match) throw new Error("Data scadenza non valida");
+
+        const day = Number(match[1]);
+        const month = Number(match[2]);
+        const year = Number(match[3]);
+        const date = new Date(year, month - 1, day);
+
+        if (
+            date.getFullYear() !== year ||
+            date.getMonth() !== month - 1 ||
+            date.getDate() !== day
+        ) {
+            throw new Error("Data scadenza non valida");
+        }
+
+        return { day, month, year };
+    }
+
+    function expiryStatus() {
+        const expiry = parseExpiry(Config.dataScadenza);
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const warningStart = new Date(expiry.year, expiry.month - 1, 1);
+        const blockDate = new Date(expiry.year, expiry.month, 1);
+        const daysRemaining = Math.max(0, Math.ceil((blockDate - today) / 86400000));
+
+        return {
+            value: Config.dataScadenza,
+            warning: today >= warningStart && today < blockDate,
+            blocked: today >= blockDate,
+            blockDate,
+            daysRemaining
+        };
+    }
+
+    function formatDate(date) {
+        const pad = value => String(value).padStart(2, "0");
+        return pad(date.getDate()) + "/" + pad(date.getMonth() + 1) + "/" + date.getFullYear();
+    }
+
     async function runStep(label, fn, options) {
         const opts = options || {};
         try {
@@ -405,6 +447,38 @@ window.SystemAudit = (() => {
 
         await runStep("Server account", () => Account.checkServer(), { warning: true });
 
+        let expiryWarning = "";
+        step = await runStep("Scadenza software", async () => {
+            const status = expiryStatus();
+
+            if (status.blocked) {
+                throw new Error(
+                    "SCADUTO DAL " + formatDate(status.blockDate) +
+                    " - data scadenza " + status.value
+                );
+            }
+
+            if (status.warning) {
+                expiryWarning =
+                    "SOFTWARE IN SCADENZA - " +
+                    status.value +
+                    " - " +
+                    status.daysRemaining +
+                    " giorni al blocco";
+
+                return { warning: expiryWarning };
+            }
+
+            return {
+                message:
+                    status.value +
+                    " - " +
+                    status.daysRemaining +
+                    " giorni al blocco"
+            };
+        });
+        if (!step.ok) failures++;
+
         step = await runStep("Salone database", async () => {
             const salone = String(Config.salone || "").trim();
             if (!salone) throw new Error("Config.salone non disponibile");
@@ -506,6 +580,7 @@ window.SystemAudit = (() => {
 
         if (failures === 0) {
             BootTerminal.ready(manual ? "DIAGNOSTICA COMPLETATA" : "SYSTEM READY - avvio cassa");
+            if (expiryWarning && !manual) alert(expiryWarning);
             if (manual) keepManualDiagnostic(appView);
             else {
                 if (appView) appView.style.display = "";

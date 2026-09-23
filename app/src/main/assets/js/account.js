@@ -30,6 +30,19 @@ const Account = (() => {
         })
     }
 
+    function localTimestamp() {
+        const now = new Date()
+        const pad = value => String(value).padStart(2, "0")
+
+        return String(now.getFullYear()) +
+            pad(now.getMonth() + 1) +
+            pad(now.getDate()) +
+            "T" +
+            pad(now.getHours()) +
+            pad(now.getMinutes()) +
+            pad(now.getSeconds())
+    }
+
     function timeoutFetch(url, options, ms) {
         const controller = typeof AbortController !== "undefined" ? new AbortController() : null
         const timer = controller ? setTimeout(() => controller.abort(), ms) : null
@@ -79,6 +92,8 @@ const Account = (() => {
         if (account.piva) Config.piva = account.piva
         if (account.pin) Config.pin = account.pin
         if (typeof account.pwd !== "undefined") Config.pwd = account.pwd
+        if (account.serverHost) Config.serverHost = account.serverHost
+        if (account.dataScadenza) Config.dataScadenza = account.dataScadenza
 
         Config.allowChangeIntestazione = account.allowChangeIntestazione === true
         Config.allowChangeUsername = account.allowChangeUsername === true
@@ -180,7 +195,8 @@ const Account = (() => {
 
     function accountUrl() {
         return String(Config.accountServerUrl || "").replace(/\/$/, "") +
-            "/accountByDevice?deviceId=" + encodeURIComponent(deviceId)
+            "/accountByDevice?deviceId=" + encodeURIComponent(deviceId) +
+            "&localTimestamp=" + localTimestamp()
     }
 
     async function fetchRemote() {
@@ -281,7 +297,7 @@ const Account = (() => {
         if (!base) throw new Error("Server account non configurato")
 
         const res = await timeoutFetch(
-            base + "/accountUpdate",
+            base + "/accountUpdate?localTimestamp=" + localTimestamp(),
             {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },

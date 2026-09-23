@@ -92,7 +92,7 @@ const DB = (() => {
     }
 
     function configureRemotes() {
-        const base = String(Config.couchdbBaseUrl || "").replace(/\/$/, "")
+        const base = String(Config.serverHost || "").replace(/\/$/, "")
         if (!base) return
 
         remotes = {}
@@ -320,7 +320,7 @@ const DB = (() => {
     }
 
     async function auditRemoteDatabase(key) {
-        if (!Config.couchdbBaseUrl) {
+        if (!Config.serverHost) {
             return { warning: "NON CONFIGURATO" }
         }
 
@@ -348,10 +348,7 @@ const DB = (() => {
             }
 
             return {
-                warning:
-                    dbNames[key] +
-                    " - NON RAGGIUNGIBILE" +
-                    (error && error.message ? " - " + error.message : "")
+                warning: dbNames[key] + " - NON RAGGIUNGIBILE"
             }
         }
     }
@@ -524,14 +521,13 @@ const DB = (() => {
         const state = syncState[key] || { status: "STARTING", lastOk: "", error: "" }
 
         if (state.status === "ERROR" || state.status === "DENIED") {
-            throw new Error(state.status + (state.error ? " - " + state.error : ""))
+            throw new Error(state.status)
         }
 
         return {
             message:
                 state.status +
-                (state.lastOk ? " - ultimo OK " + state.lastOk : "") +
-                (state.error ? " - " + state.error : "")
+                (state.lastOk ? " - ultimo OK " + state.lastOk : "")
         }
     }
 
