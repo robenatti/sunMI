@@ -176,6 +176,54 @@ const DB = (() => {
     }
 
     async function ensureSeed() {
+        function buildSeedReparti() {
+            const counts = {}
+
+            ;(Config.listino || []).forEach(item => {
+                const reparto = Number(item.reparto || 1)
+                counts[reparto] = Number(counts[reparto] || 0) + 1
+            })
+
+            return (Config.reparti || []).slice(1).map((nome, index) => {
+                const id = index + 1
+                const upperName = String(nome || "").toUpperCase()
+
+                return {
+                    id: id,
+                    nome: nome || ("R" + id),
+                    vista:
+                        upperName === "TUTTI" || Number(counts[id] || 0) > 16
+                            ? "LISTA"
+                            : "BOTTONI"
+                }
+            })
+        }
+
+        function buildSeedDocs() {
+            if (!Array.isArray(Config.listino)) return []
+
+            return Config.listino.map(item => {
+                const isProduct = item.tipo === "P" || Number(item.reparto) === 8
+
+                return {
+                    _id: uuid(),
+                    tipo: isProduct ? "P" : "S",
+                    nome: item.servizio || item.prodotto || "Articolo",
+                    prezzo: parseNumber(item.prezzo),
+                    prezzobase: parseNumber(item.prezzo),
+                    reparto: Number(item.reparto || 1),
+                    posizione: Number(item.posizione || 1),
+                    categoria: item.categoria || "",
+                    codice: String(item.codice || ""),
+                    iva: parseNumber(typeof item.iva !== "undefined" ? item.iva : 22),
+                    barcode: item.barcode || "",
+                    marca: item.marca || "",
+                    fornitore: item.fornitore || "",
+                    attivo: true
+                }
+            })
+        }
+
         let configDoc = null
 
         try {
@@ -184,20 +232,57 @@ const DB = (() => {
             if (e.status !== 404) throw e
         }
 
-        if (!configDoc) {
-            const reparti = (Config.reparti || []).slice(1).map((nome, index) => ({
-                id: index + 1,
-                nome: nome || ("R" + (index + 1)),
-                vista: String(nome || "").toUpperCase() === "TUTTI" ? "LISTA" : "BOTTONI"
-            }))
+        const seedVersion = String(Config.seedVersion || "")
+        const forceSeed =
+            !!seedVersion &&
+            String(configDoc && configDoc.seedVersion || "") !== seedVersion
 
+        if (forceSeed) {
+            const currentArticles = await dbs.magazzino.allDocs({ include_docs: true })
+            const deletions = currentArticles.rows
+                .map(row => row.doc)
+                .filter(doc => doc && !doc._id.startsWith("_design/"))
+                .map(doc => ({
+                    _id: doc._id,
+                    _rev: doc._rev,
+                    _deleted: true
+                }))
+
+            if (deletions.length) {
+                await dbs.magazzino.bulkDocs(deletions)
+            }
+
+            const docs = buildSeedDocs()
+            if (docs.length) {
+                await dbs.magazzino.bulkDocs(docs)
+            }
+
+            const nextConfig = Object.assign({}, configDoc || {}, {
+                _id: "config-pos",
+                tipo: "config",
+                reparti: buildSeedReparti(),
+                seedVersion: seedVersion
+            })
+
+            if (!Array.isArray(nextConfig.casse) || !nextConfig.casse.length) {
+                nextConfig.casse = [
+                    { id: 1, nome: "Cassa 1" }
+                ]
+            }
+
+            if (configDoc && configDoc._rev) nextConfig._rev = configDoc._rev
+
+            await dbs.config.put(nextConfig)
+            configDoc = await dbs.config.get("config-pos")
+        } else if (!configDoc) {
             configDoc = {
                 _id: "config-pos",
                 tipo: "config",
-                reparti: reparti,
+                reparti: buildSeedReparti(),
                 casse: [
                     { id: 1, nome: "Cassa 1" }
-                ]
+                ],
+                seedVersion: seedVersion
             }
 
             await dbs.config.put(configDoc)
@@ -243,26 +328,7 @@ const DB = (() => {
         const info = await dbs.magazzino.info()
 
         if (info.doc_count === 0 && Array.isArray(Config.listino)) {
-            const docs = Config.listino.map((item, index) => {
-                const isProduct = item.tipo === "P" || Number(item.reparto) === 8
-
-                return {
-                    _id: "seed-" + String(index + 1).padStart(4, "0"),
-                    tipo: isProduct ? "P" : "S",
-                    nome: item.servizio || item.prodotto || "Articolo",
-                    prezzo: parseNumber(item.prezzo),
-                    prezzobase: parseNumber(item.prezzo),
-                    reparto: Number(item.reparto || 1),
-                    posizione: Number(item.posizione || 1),
-                    categoria: item.categoria || "",
-                    codice: String(item.codice || ""),
-                    iva: parseNumber(typeof item.iva !== "undefined" ? item.iva : 22),
-                    barcode: item.barcode || "",
-                    marca: item.marca || "",
-                    fornitore: item.fornitore || "",
-                    attivo: true
-                }
-            })
+            const docs = buildSeedDocs()
 
             if (docs.length) {
                 await dbs.magazzino.bulkDocs(docs)
