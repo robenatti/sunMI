@@ -16,6 +16,12 @@ AppViews.riepilogo = (() => {
         return y + "-" + m + "-" + day
     }
 
+    function paymentLabel(value) {
+        if (value === "CA") return "CONTANTI"
+        if (value === "CC") return "POS"
+        return value || ""
+    }
+
     function selectedCasse() {
         return Array.from(document.querySelectorAll(".cash-check:checked")).map(input => input.value)
     }
@@ -30,7 +36,7 @@ AppViews.riepilogo = (() => {
 
         const meta = document.createElement("div")
         meta.className = "detail-meta"
-        meta.textContent = receipt.data + " " + receipt.ora + " · Cassa " + (receipt.superConnect || 1) + " · " + receipt.mp
+        meta.textContent = receipt.data + " " + receipt.ora + " · Cassa " + (receipt.superConnect || 1) + " · " + paymentLabel(receipt.mp)
         box.appendChild(meta)
 
         ;(receipt.righe || []).forEach(row => {
@@ -164,7 +170,7 @@ AppViews.riepilogo = (() => {
             ;[
                 receipt.ora || "",
                 String(receipt.superConnect || 1),
-                receipt.mp || "",
+                paymentLabel(receipt.mp),
                 money(receipt.totale)
             ].forEach(value => {
                 const td = document.createElement("td")
