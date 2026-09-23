@@ -214,16 +214,26 @@ AppViews.riepilogo = (() => {
         document.getElementById("summaryDate").addEventListener("change", refresh)
 
         const cashChecks = document.getElementById("cashChecks")
-        AppAPI.getCasse().forEach(cassa => {
+        const device = await AppAPI.getDeviceConfig()
+        const currentCash = Number(device.superConnect || Config.superConnect || 1)
+        const configuredCashes = AppAPI.getCasse()
+
+        ;[1, 2, 3].forEach(id => {
+            const cassa = configuredCashes.find(item => Number(item.id) === id) || {
+                id: id,
+                nome: "Cassa " + id
+            }
+
             const label = document.createElement("label")
-            label.className = "cash-check-label"
+            label.className = "cash-check-label " +
+                (id === currentCash ? "cash-check-current" : "cash-check-inactive")
 
             const input = document.createElement("input")
             input.type = "checkbox"
             input.className = "cash-check"
             input.value = cassa.id
-            input.checked = true
-            input.addEventListener("change", refresh)
+            input.checked = id === currentCash
+            input.disabled = true
 
             const text = document.createElement("span")
             text.textContent = cassa.nome

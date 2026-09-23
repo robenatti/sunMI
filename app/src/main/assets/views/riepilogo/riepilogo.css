@@ -40,6 +40,16 @@
     border-radius: 0.45rem;
 }
 
+.cash-check-label.cash-check-inactive {
+    background: #1b1e24;
+    color: #aeb4bd;
+    opacity: 0.45;
+}
+
+.cash-check-label.cash-check-current {
+    opacity: 1;
+}
+
 .summary-cards {
     display: grid;
     grid-template-columns: repeat(6, 1fr);
