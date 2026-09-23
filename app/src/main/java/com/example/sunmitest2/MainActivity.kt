@@ -5,6 +5,7 @@
 package com.example.sunmitest2
 
 import android.app.Activity
+import android.app.AlertDialog
 import android.app.Dialog
 import android.graphics.Bitmap
 import android.graphics.Color
@@ -17,6 +18,7 @@ import android.util.Base64
 import android.view.Gravity
 import android.view.ViewGroup
 import android.webkit.JavascriptInterface
+import android.webkit.JsResult
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
@@ -90,7 +92,31 @@ class MainActivity : Activity() {
         webView.settings.allowContentAccess = false
         webView.settings.mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
 
-        webView.webChromeClient = WebChromeClient()
+        webView.webChromeClient = object : WebChromeClient() {
+            override fun onJsConfirm(
+                view: WebView?,
+                url: String?,
+                message: String?,
+                result: JsResult?
+            ): Boolean {
+                AlertDialog.Builder(this@MainActivity)
+                    .setMessage(message ?: "")
+                    .setNegativeButton("NO") { dialog, _ ->
+                        result?.cancel()
+                        dialog.dismiss()
+                    }
+                    .setPositiveButton("OK") { dialog, _ ->
+                        result?.confirm()
+                        dialog.dismiss()
+                    }
+                    .setOnCancelListener {
+                        result?.cancel()
+                    }
+                    .show()
+
+                return true
+            }
+        }
 
         webView.webViewClient = object : WebViewClient() {
             override fun shouldInterceptRequest(
