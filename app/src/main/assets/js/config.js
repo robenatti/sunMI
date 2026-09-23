@@ -43,6 +43,7 @@ if (true) {
         Config.intestazione.riga2 = "AltraConsulenza Snc";
         Config.intestazione.riga3 = "Via Manzoni 8 - Carpi (MO)";
         Config.intestazione.riga4 = "P.Iva 02881040360";
+        Config.intestazione.riga5 = "";
         Config.intestazione.userScade="250aa4c6210a214913c283e65f00489f";
         //Config.intestazione.userScade="6bfb8a18f91c8357615e4c7cd800c9ea"; //RENATO
 

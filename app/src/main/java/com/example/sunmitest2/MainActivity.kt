@@ -5,18 +5,27 @@
 package com.example.sunmitest2
 
 import android.app.Activity
-import android.content.Intent
+import android.app.Dialog
+import android.graphics.Bitmap
+import android.graphics.Color
+import android.graphics.pdf.PdfRenderer
 import android.os.Build
 import android.os.Bundle
+import android.os.ParcelFileDescriptor
 import android.provider.Settings
 import android.util.Base64
+import android.view.Gravity
+import android.view.ViewGroup
 import android.webkit.JavascriptInterface
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.Button
+import android.widget.ImageView
+import android.widget.LinearLayout
+import android.widget.TextView
 import android.widget.Toast
-import androidx.core.content.FileProvider
 import androidx.webkit.WebViewAssetLoader
 import com.example.sunmitest2.printer.SunmiPrinterDriver
 import com.sunmi.peripheral.printer.InnerPrinterCallback
@@ -110,6 +119,118 @@ class MainActivity : Activity() {
         val pdfDir = File(filesDir, "pdf")
         if (!pdfDir.exists()) pdfDir.mkdirs()
         return File(pdfDir, File(fileName).name)
+    }
+
+    private fun openPdfInternal(file: File) {
+        val descriptor = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
+        val renderer = PdfRenderer(descriptor)
+
+        if (renderer.pageCount <= 0) {
+            renderer.close()
+            descriptor.close()
+            throw IllegalStateException("PDF senza pagine")
+        }
+
+        val dialog = Dialog(this)
+        val root = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(Color.WHITE)
+        }
+
+        val title = TextView(this).apply {
+            text = file.name
+            setTextColor(Color.BLACK)
+            textSize = 16f
+            gravity = Gravity.CENTER
+            setPadding(12, 12, 12, 12)
+        }
+
+        val image = ImageView(this).apply {
+            adjustViewBounds = true
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            setBackgroundColor(Color.WHITE)
+        }
+
+        val controls = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(8, 8, 8, 8)
+        }
+
+        val previous = Button(this).apply { text = "←" }
+        val pageLabel = TextView(this).apply {
+            setTextColor(Color.BLACK)
+            gravity = Gravity.CENTER
+        }
+        val next = Button(this).apply { text = "→" }
+        val close = Button(this).apply { text = "CHIUDI" }
+
+        controls.addView(previous, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        controls.addView(pageLabel, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 2f))
+        controls.addView(next, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        controls.addView(close, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 2f))
+
+        root.addView(title, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        root.addView(image, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
+        root.addView(controls, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+
+        dialog.setContentView(root)
+
+        var pageIndex = 0
+        var bitmap: Bitmap? = null
+
+        fun renderPage() {
+            val page = renderer.openPage(pageIndex)
+            val targetWidth = resources.displayMetrics.widthPixels.coerceAtLeast(1)
+            val targetHeight = (targetWidth.toFloat() * page.height.toFloat() / page.width.toFloat())
+                .toInt()
+                .coerceAtLeast(1)
+
+            bitmap?.recycle()
+            bitmap = Bitmap.createBitmap(targetWidth, targetHeight, Bitmap.Config.ARGB_8888).apply {
+                eraseColor(Color.WHITE)
+            }
+
+            page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+            page.close()
+
+            image.setImageBitmap(bitmap)
+            pageLabel.text = "${pageIndex + 1} / ${renderer.pageCount}"
+            previous.isEnabled = pageIndex > 0
+            next.isEnabled = pageIndex < renderer.pageCount - 1
+        }
+
+        previous.setOnClickListener {
+            if (pageIndex > 0) {
+                pageIndex--
+                renderPage()
+            }
+        }
+
+        next.setOnClickListener {
+            if (pageIndex < renderer.pageCount - 1) {
+                pageIndex++
+                renderPage()
+            }
+        }
+
+        close.setOnClickListener {
+            dialog.dismiss()
+        }
+
+        dialog.setOnDismissListener {
+            image.setImageDrawable(null)
+            bitmap?.recycle()
+            renderer.close()
+            descriptor.close()
+        }
+
+        renderPage()
+        dialog.show()
+        dialog.window?.setLayout(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.MATCH_PARENT
+        )
     }
 
     private fun handleCommand(json: String) {
@@ -207,17 +328,7 @@ class MainActivity : Activity() {
                         return
                     }
 
-                    val uri = FileProvider.getUriForFile(
-                        this,
-                        packageName + ".fileprovider",
-                        file
-                    )
-
-                    val intent = Intent(Intent.ACTION_VIEW)
-                    intent.setDataAndType(uri, "application/pdf")
-                    intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                    startActivity(intent)
-
+                    openPdfInternal(file)
                     sendSuccess(id, JSONObject().put("opened", true))
                 }
 

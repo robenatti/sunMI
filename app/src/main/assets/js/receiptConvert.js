@@ -11,6 +11,8 @@ function renderReceiptIT(r) {
         out.push({ text: Config.intestazione.riga3, align: "center" });
     if (Config.intestazione.riga4)
         out.push({ text: Config.intestazione.riga4, align: "center" });
+    if (Config.intestazione.riga5)
+        out.push({ text: Config.intestazione.riga5, align: "center" });
 
     out.push({ separator: true });
     out.push({ text: "DOCUMENTO COMMERCIALE", align: "center", bold: true });
@@ -78,6 +80,8 @@ function renderReceiptAL(r) {
         out.push({ text: Config.intestazione.riga3, align: "center" });
     if (Config.intestazione.riga4)
         out.push({ text: Config.intestazione.riga4, align: "center" });
+    if (Config.intestazione.riga5)
+        out.push({ text: Config.intestazione.riga5, align: "center" });
 
     out.push({ separator: true });
     out.push({ text: "KUPON TATIMOR", align: "center", bold: true });

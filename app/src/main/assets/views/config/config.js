@@ -241,24 +241,36 @@ AppViews.config = (() => {
         renderCashes()
     }
 
+    function updatePasswordButtonState() {
+        const state = AppAPI.getAccountState()
+        const account = state.account || {}
+        const first = document.getElementById("accountPassword1").value
+        const second = document.getElementById("accountPassword2").value
+        document.getElementById("changePassword").disabled =
+            account.allowChangePassword !== true || !first || !second || first !== second
+    }
+
     function renderAccount() {
         const state = AppAPI.getAccountState()
         const account = state.account || {}
         const intestazione = account.intestazione || Config.intestazione || {}
         const allowHeader = account.allowChangeIntestazione === true
         const allowUser = account.allowChangeUsername === true
+        const allowPassword = account.allowChangePassword === true
 
         document.getElementById("accountHeader1").value = intestazione.riga1 || ""
         document.getElementById("accountHeader2").value = intestazione.riga2 || ""
         document.getElementById("accountHeader3").value = intestazione.riga3 || ""
         document.getElementById("accountHeader4").value = intestazione.riga4 || ""
+        document.getElementById("accountHeader5").value = intestazione.riga5 || ""
 
         document.getElementById("accountCf").value = account.cf || ""
         document.getElementById("accountPiva").value = account.piva || ""
         document.getElementById("accountPin").value = account.pin || ""
-        document.getElementById("accountPwd").value = account.pwd || ""
+        document.getElementById("accountPassword1").value = ""
+        document.getElementById("accountPassword2").value = ""
 
-        ;["accountHeader1", "accountHeader2", "accountHeader3", "accountHeader4"].forEach(id => {
+        ;["accountHeader1", "accountHeader2", "accountHeader3", "accountHeader4", "accountHeader5"].forEach(id => {
             document.getElementById(id).disabled = !allowHeader
         })
 
@@ -266,11 +278,16 @@ AppViews.config = (() => {
             document.getElementById(id).disabled = !allowUser
         })
 
-        document.getElementById("accountPwd").disabled = true
+        document.getElementById("accountPassword1").disabled = !allowPassword
+        document.getElementById("accountPassword2").disabled = !allowPassword
         document.getElementById("headerPermission").textContent =
             allowHeader ? "MODIFICA ABILITATA DAL SERVER" : "SOLA LETTURA"
         document.getElementById("userPermission").textContent =
             allowUser ? "DATI UTENTE MODIFICABILI" : "DATI UTENTE IN SOLA LETTURA"
+        document.getElementById("passwordPermission").textContent =
+            allowPassword ? "CAMBIO PASSWORD ABILITATO DAL SERVER" : "CAMBIO PASSWORD NON ABILITATO"
+
+        updatePasswordButtonState()
     }
 
     async function saveAccountConfig() {
@@ -283,7 +300,8 @@ AppViews.config = (() => {
                 riga1: document.getElementById("accountHeader1").value.trim(),
                 riga2: document.getElementById("accountHeader2").value.trim(),
                 riga3: document.getElementById("accountHeader3").value.trim(),
-                riga4: document.getElementById("accountHeader4").value.trim()
+                riga4: document.getElementById("accountHeader4").value.trim(),
+                riga5: document.getElementById("accountHeader5").value.trim()
             }
         }
 
@@ -298,6 +316,33 @@ AppViews.config = (() => {
             window.location.reload()
         } catch (error) {
             alert("ERRORE SALVATAGGIO ACCOUNT: " + (error && error.message ? error.message : String(error)))
+        }
+    }
+
+    async function changePassword() {
+        const state = AppAPI.getAccountState()
+        const account = state.account || {}
+        if (account.allowChangePassword !== true) return
+
+        const first = document.getElementById("accountPassword1").value
+        const second = document.getElementById("accountPassword2").value
+
+        if (!first || first !== second) {
+            updatePasswordButtonState()
+            return
+        }
+
+        const button = document.getElementById("changePassword")
+        button.disabled = true
+
+        try {
+            await AppAPI.saveAccount({ nuovaPassword: first })
+            document.getElementById("accountPassword1").value = ""
+            document.getElementById("accountPassword2").value = ""
+            updatePasswordButtonState()
+        } catch (error) {
+            alert("ERRORE CAMBIO PASSWORD: " + (error && error.message ? error.message : String(error)))
+            updatePasswordButtonState()
         }
     }
 
@@ -336,10 +381,13 @@ AppViews.config = (() => {
             "accountHeader2",
             "accountHeader3",
             "accountHeader4",
+            "accountHeader5",
             "accountCf",
             "accountPiva",
             "accountPin",
-            "accountPwd",
+            "accountPassword1",
+            "accountPassword2",
+            "changePassword",
             "saveAccountConfig"
         ]
 
@@ -368,6 +416,9 @@ AppViews.config = (() => {
         document.getElementById("addCash").addEventListener("click", addCash)
         document.getElementById("saveCashes").addEventListener("click", saveCashes)
         document.getElementById("saveAccountConfig").addEventListener("click", saveAccountConfig)
+        document.getElementById("accountPassword1").addEventListener("input", updatePasswordButtonState)
+        document.getElementById("accountPassword2").addEventListener("input", updatePasswordButtonState)
+        document.getElementById("changePassword").addEventListener("click", changePassword)
     }
 
     function unmount() {}

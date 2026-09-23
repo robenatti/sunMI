@@ -151,7 +151,6 @@
     border-bottom: 1px solid #242933;
 }
 
-
 .receipt-table tbody tr.receipt-fiscal-pending {
     background: #5a1717;
 }
@@ -161,8 +160,20 @@
 }
 
 .receipt-table tbody tr.receipt-annulled td {
-    text-decoration: line-through;
+    position: relative;
     opacity: 0.55;
+}
+
+.receipt-table tbody tr.receipt-annulled td::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    height: 2px;
+    background: currentColor;
+    pointer-events: none;
+    z-index: 2;
 }
 
 .receipt-action-button {

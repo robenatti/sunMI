@@ -157,7 +157,8 @@
     min-height: 0;
 }
 
-.password-zone {
+.password-zone,
+.password-change-zone {
     display: flex;
     flex-direction: column;
     gap: 0.7rem;
@@ -172,18 +173,21 @@
     font-size: 0.9rem;
 }
 
-.password-zone .save-button {
-    align-self: flex-start;
+.password-change-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 0.7rem;
+    align-items: end;
+}
+
+.password-change-row .btn {
+    min-width: 11rem;
+    min-height: 2.7rem;
 }
 
 .password-editor input:disabled,
 .password-editor button:disabled {
     opacity: 0.55;
-}
-
-.password-auto-check {
-    flex-direction: row !important;
-    align-items: center;
 }
 
 .password-demo-note {

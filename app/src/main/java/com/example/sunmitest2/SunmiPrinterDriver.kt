@@ -69,41 +69,35 @@ class SunmiPrinterDriver(
                 val align = line.optString("align", "left")
                 val double = line.optBoolean("double", false)
 
-                // ALIGN
                 when (align) {
                     "center" -> svc.setAlignment(1, callback)
                     "right" -> svc.setAlignment(2, callback)
                     else -> svc.setAlignment(0, callback)
                 }
 
-                // BOLD
                 svc.sendRAWData(
                     if (bold) byteArrayOf(0x1B, 0x45, 0x01)
                     else byteArrayOf(0x1B, 0x45, 0x00),
                     callback
                 )
 
-                // DOUBLE SIZE
                 svc.sendRAWData(
                     if (double) byteArrayOf(0x1D, 0x21, 0x11)
                     else byteArrayOf(0x1D, 0x21, 0x00),
                     callback
                 )
 
-                // ===== QRCODE =====
                 if (line.has("qrcode")) {
-                    svc.setAlignment(1, callback) // centro
+                    svc.setAlignment(1, callback)
                     svc.printQRCode(line.getString("qrcode"), 4, 0, callback)
                     continue
                 }
 
-                // ===== BARCODE =====
                 if (line.has("barcode")) {
                     svc.printBarCode(line.getString("barcode"), 8, 80, 2, 2, callback)
                     continue
                 }
 
-                // ===== COLUMNS (FIXED WIDTH) =====
                 if (line.has("columns")) {
 
                     val arr = line.getJSONArray("columns")
@@ -113,6 +107,16 @@ class SunmiPrinterDriver(
                         paperWidthMm <= 58 &&
                         cols.size == 3 &&
                         cols[2] == "PREZZO (€)"
+
+                    val isElectronicPayment58 =
+                        paperWidthMm <= 58 &&
+                        cols.size == 2 &&
+                        cols[0].equals("PAGAMENTO ELETTRONICO", ignoreCase = true)
+
+                    val isProductsClose58 =
+                        paperWidthMm <= 58 &&
+                        cols.size == 2 &&
+                        cols[0] == "Incasso per PRODOTTI"
 
                     if (isReceiptHeader58) {
                         cols[2] = "PREZZO €"
@@ -125,7 +129,16 @@ class SunmiPrinterDriver(
                             ALIGN_3,
                             callback
                         )
-                        2 -> svc.printColumnsText(cols, profile.widths2, ALIGN_2, callback)
+                        2 -> svc.printColumnsText(
+                            cols,
+                            when {
+                                isElectronicPayment58 -> intArrayOf(21, 10)
+                                isProductsClose58 -> intArrayOf(20, 11)
+                                else -> profile.widths2
+                            },
+                            ALIGN_2,
+                            callback
+                        )
                         else -> svc.printColumnsText(
                             cols,
                             IntArray(cols.size) { profile.totalWidth / cols.size },
@@ -137,13 +150,11 @@ class SunmiPrinterDriver(
                     continue
                 }
 
-                // ===== SEPARATOR =====
                 if (line.optBoolean("separator", false)) {
                     svc.printText("-".repeat(profile.totalWidth) + "\n", callback)
                     continue
                 }
 
-                // ===== NEWLINE =====
                 if (line.has("newline")) {
                     repeat(line.getInt("newline")) {
                         svc.printText("\n", callback)
@@ -151,13 +162,9 @@ class SunmiPrinterDriver(
                     continue
                 }
 
-                // ===== TEXT =====
                 if (line.has("text")) {
-
                     val text = line.getString("text")
-
                     svc.printText(text + "\n", callback)
-
                     continue
                 }
             }

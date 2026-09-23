@@ -82,6 +82,7 @@ const Account = (() => {
 
         Config.allowChangeIntestazione = account.allowChangeIntestazione === true
         Config.allowChangeUsername = account.allowChangeUsername === true
+        Config.allowChangePassword = account.allowChangePassword === true
 
         if (account.intestazione) {
             Config.intestazione = Object.assign({}, Config.intestazione || {}, account.intestazione)

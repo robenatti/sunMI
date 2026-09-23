@@ -61,8 +61,8 @@ const CloseDay = (() => {
         out.push({ text: "RIEPILOGO PAGAMENTI", align: "center" });
         out.push({ newline: 1 });
         out.push({ columns: ["TIPO PAGAMENTO", "", "IMPORTO"], bold: true });
-        out.push({ columns: ["Totale Pagamento ELETTRONICO", formatAmount(summary.pos)], bold: true });
-        out.push({ columns: ["Totale Pagamento CONTANTI", formatAmount(summary.contanti)], bold: true });
+        out.push({ columns: ["Pagamento ELETTRONICO", formatAmount(summary.pos)], bold: true });
+        out.push({ columns: ["Pagamento CONTANTI", formatAmount(summary.contanti)], bold: true });
         out.push({ newline: 2 });
         out.push({ text: "Stampa del " + stampata.data + " " + stampata.ora, align: "center" });
         out.push({ cut: 10 });
