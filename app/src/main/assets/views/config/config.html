@@ -8,7 +8,6 @@
     <nav class="config-tabs">
         <button class="btn config-tab active" data-panel="articlesPanel">ARTICOLI E PREZZI</button>
         <button class="btn config-tab" data-panel="departmentsPanel">REPARTI</button>
-        <button class="btn config-tab" data-panel="cashesPanel">CASSE</button>
         <button class="btn config-tab" data-panel="passwordPanel">PASSWORD</button>
         <button class="btn" id="runAudit">DIAGNOSTICA</button>
     </nav>
@@ -106,13 +105,23 @@
             </div>
 
             <div class="password-change-zone">
-                <div class="password-zone-title">CAMBIO PASSWORD</div>
-                <div class="password-change-row">
-                    <label>NUOVA PASSWORD<input id="accountPassword1" type="password" autocomplete="new-password"></label>
-                    <label>RIPETI PASSWORD<input id="accountPassword2" type="password" autocomplete="new-password"></label>
-                    <button class="btn" id="changePassword" type="button">CAMBIO PASSWORD</button>
+                <div class="password-zone-title">CONFIGURAZIONE DISPOSITIVO</div>
+                <div class="password-device-row">
+                    <label>CASSA
+                        <select id="accountCash">
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                        </select>
+                    </label>
+                    <label>LARGHEZZA CARTA
+                        <select id="accountPaperWidthMm">
+                            <option value="80">80 mm</option>
+                            <option value="58">58 mm</option>
+                        </select>
+                    </label>
                 </div>
-                <div id="passwordPermission" class="password-demo-note"></div>
+                <div id="devicePermission" class="password-demo-note"></div>
             </div>
 
             <button class="btn save-button config-save-fixed" id="saveAccountConfig" type="button">SALVA</button>

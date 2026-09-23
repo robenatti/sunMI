@@ -267,22 +267,12 @@ AppViews.config = (() => {
         renderCashes()
     }
 
-    function updatePasswordButtonState() {
-        const state = AppAPI.getAccountState()
-        const account = state.account || {}
-        const first = document.getElementById("accountPassword1").value
-        const second = document.getElementById("accountPassword2").value
-        document.getElementById("changePassword").disabled =
-            account.allowChangePassword !== true || !first || !second || first !== second
-    }
-
     function renderAccount() {
         const state = AppAPI.getAccountState()
         const account = state.account || {}
         const intestazione = account.intestazione || Config.intestazione || {}
         const allowHeader = account.allowChangeIntestazione === true
         const allowUser = account.allowChangeUsername === true
-        const allowPassword = account.allowChangePassword === true
 
         document.getElementById("accountHeader1").value = intestazione.riga1 || ""
         document.getElementById("accountHeader2").value = intestazione.riga2 || ""
@@ -294,8 +284,11 @@ AppViews.config = (() => {
         document.getElementById("accountPiva").value = account.piva || ""
         document.getElementById("accountPin").value = account.pin || ""
         document.getElementById("accountPwd").value = account.pwd || ""
-        document.getElementById("accountPassword1").value = ""
-        document.getElementById("accountPassword2").value = ""
+
+        document.getElementById("accountCash").value =
+            String(Number(configData.device.superConnect || 1))
+        document.getElementById("accountPaperWidthMm").value =
+            String(Number(configData.device.paperWidthMm || Config.paperWidthMm || 80) <= 58 ? 58 : 80)
 
         ;["accountHeader1", "accountHeader2", "accountHeader3", "accountHeader4", "accountHeader5"].forEach(id => {
             document.getElementById(id).disabled = !allowHeader
@@ -306,16 +299,15 @@ AppViews.config = (() => {
         })
 
         document.getElementById("accountPwd").disabled = false
-        document.getElementById("accountPassword1").disabled = !allowPassword
-        document.getElementById("accountPassword2").disabled = !allowPassword
+        document.getElementById("accountCash").disabled = !allowUser
+        document.getElementById("accountPaperWidthMm").disabled = !allowUser
+
         document.getElementById("headerPermission").textContent =
             allowHeader ? "DATI INTESTAZIONE MODIFICABILI" : "DATI INTESTAZIONE NON MODIFICABILI"
         document.getElementById("userPermission").textContent =
             allowUser ? "DATI UTENTE MODIFICABILI" : "DATI UTENTE IN SOLA LETTURA"
-        document.getElementById("passwordPermission").textContent =
-            allowPassword ? "CAMBIO PASSWORD ABILITATO DAL SERVER" : "CAMBIO PASSWORD NON ABILITATO"
-
-        updatePasswordButtonState()
+        document.getElementById("devicePermission").textContent =
+            allowUser ? "CONFIGURAZIONE DISPOSITIVO MODIFICABILE" : "CONFIGURAZIONE DISPOSITIVO IN SOLA LETTURA"
     }
 
     async function saveAccountConfig() {
@@ -344,38 +336,30 @@ AppViews.config = (() => {
 
         try {
             await AppAPI.saveAccount(changes)
+
+            if (account.allowChangeUsername === true) {
+                const existingCashes = configData.config.casse || []
+                const casse = [1, 2, 3].map(id => {
+                    return existingCashes.find(cassa => Number(cassa.id) === id) || {
+                        id: id,
+                        nome: "Cassa " + id
+                    }
+                })
+
+                configData = await AppAPI.saveCasse(
+                    casse,
+                    document.getElementById("accountCash").value,
+                    document.getElementById("accountPaperWidthMm").value
+                )
+            }
+
             window.location.reload()
         } catch (error) {
             alert("ERRORE SALVATAGGIO ACCOUNT: " + (error && error.message ? error.message : String(error)))
         }
     }
 
-    async function changePassword() {
-        const state = AppAPI.getAccountState()
-        const account = state.account || {}
-        if (account.allowChangePassword !== true) return
 
-        const first = document.getElementById("accountPassword1").value
-        const second = document.getElementById("accountPassword2").value
-
-        if (!first || first !== second) {
-            updatePasswordButtonState()
-            return
-        }
-
-        const button = document.getElementById("changePassword")
-        button.disabled = true
-
-        try {
-            await AppAPI.saveAccount({ nuovaPassword: first })
-            document.getElementById("accountPassword1").value = ""
-            document.getElementById("accountPassword2").value = ""
-            renderAccount()
-        } catch (error) {
-            alert("ERRORE CAMBIO PASSWORD: " + (error && error.message ? error.message : String(error)))
-            updatePasswordButtonState()
-        }
-    }
 
     function bindTabs() {
         document.querySelectorAll(".config-tab").forEach(button => {
@@ -418,9 +402,8 @@ AppViews.config = (() => {
             "accountPiva",
             "accountPin",
             "accountPwd",
-            "accountPassword1",
-            "accountPassword2",
-            "changePassword",
+            "accountCash",
+            "accountPaperWidthMm",
             "saveAccountConfig"
         ]
 
@@ -449,10 +432,6 @@ AppViews.config = (() => {
         document.getElementById("addCash").addEventListener("click", addCash)
         document.getElementById("saveCashes").addEventListener("click", saveCashes)
         document.getElementById("saveAccountConfig").addEventListener("click", saveAccountConfig)
-        document.getElementById("accountPwd").addEventListener("input", updatePasswordButtonState)
-        document.getElementById("accountPassword1").addEventListener("input", updatePasswordButtonState)
-        document.getElementById("accountPassword2").addEventListener("input", updatePasswordButtonState)
-        document.getElementById("changePassword").addEventListener("click", changePassword)
     }
 
     function unmount() {}

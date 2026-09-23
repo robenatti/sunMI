@@ -13,7 +13,7 @@
 
 .config-tabs {
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: 0.5rem;
 }
 
@@ -185,19 +185,15 @@
     font-size: 0.9rem;
 }
 
-.password-change-row {
+.password-device-row {
     display: grid;
-    grid-template-columns: 1fr 1fr auto;
+    grid-template-columns: 1fr 1fr;
     gap: 0.7rem;
     align-items: end;
 }
 
-.password-change-row .btn {
-    min-width: 11rem;
-    min-height: 2.7rem;
-}
-
 .password-editor input:disabled,
+.password-editor select:disabled,
 .password-editor button:disabled {
     opacity: 0.55;
 }
