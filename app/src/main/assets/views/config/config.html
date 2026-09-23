@@ -8,6 +8,7 @@
     <nav class="config-tabs">
         <button class="btn config-tab active" data-panel="articlesPanel">ARTICOLI E PREZZI</button>
         <button class="btn config-tab" data-panel="departmentsPanel">REPARTI</button>
+        <button class="btn config-tab" data-panel="receiptNotesPanel">NOTE SCONTRINO</button>
         <button class="btn config-tab" data-panel="passwordPanel">PASSWORD</button>
         <button class="btn" id="runAudit">DIAGNOSTICA</button>
     </nav>
@@ -62,22 +63,13 @@
         </div>
     </section>
 
-    <section id="cashesPanel" class="config-panel">
-        <div class="cash-editor">
-            <div class="form-row">
-                <label>CASSA DI QUESTO DISPOSITIVO<select id="currentCash"></select></label>
-                <label>LARGHEZZA CARTA
-                    <select id="paperWidthMm">
-                        <option value="80">80 mm</option>
-                        <option value="58">58 mm</option>
-                    </select>
-                </label>
-            </div>
-            <div id="cashRows"></div>
-            <div class="cash-actions">
-                <button class="btn" id="addCash">AGGIUNGI CASSA</button>
-            </div>
-            <button class="btn save-button config-save-fixed" id="saveCashes">SALVA</button>
+    <section id="receiptNotesPanel" class="config-panel">
+        <div class="receipt-notes-editor">
+            <label>TESTO IN CODA ALLO SCONTRINO
+                <textarea id="receiptNotes" rows="10" placeholder="Testo libero..."></textarea>
+            </label>
+            <div id="receiptNotesPermission" class="password-demo-note"></div>
+            <button class="btn save-button config-save-fixed" id="saveReceiptNotes" type="button">SALVA</button>
         </div>
     </section>
 

@@ -147,6 +147,11 @@ const AppAPI = (() => {
         return clone(await DB.getDeviceConfig());
     }
 
+    async function saveDeviceConfig(changes) {
+        await DB.saveDeviceConfig(changes || {});
+        return getConfig();
+    }
+
     async function retryReceipt(id) {
         return POS.retryReceipt(id);
     }
@@ -196,6 +201,7 @@ const AppAPI = (() => {
         getCasse,
         getDailySummary,
         getDeviceConfig,
+        saveDeviceConfig,
         retryReceipt,
         cancelReceipt,
         getAccountState,

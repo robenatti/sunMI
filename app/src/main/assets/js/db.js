@@ -307,13 +307,21 @@ const DB = (() => {
             ? (Number(accountDevice.paperWidthMm) <= 58 ? 58 : 80)
             : (Number(deviceDoc && deviceDoc.paperWidthMm || Config.paperWidthMm || 80) <= 58 ? 58 : 80)
 
+        const noteScontrino =
+            accountDevice && typeof accountDevice.noteScontrino !== "undefined"
+                ? String(accountDevice.noteScontrino || "")
+                : String(deviceDoc && deviceDoc.noteScontrino || Config.noteScontrino || "")
+
+        Config.noteScontrino = noteScontrino
+
         const nextDevice = Object.assign({}, deviceDoc || {}, {
             _id: "_local/device",
             deviceId: accountState && accountState.deviceId
                 ? accountState.deviceId
                 : String(deviceDoc && deviceDoc.deviceId || ""),
             superConnect: superConnect,
-            paperWidthMm: paperWidthMm
+            paperWidthMm: paperWidthMm,
+            noteScontrino: noteScontrino
         })
 
         if (deviceDoc && deviceDoc._rev) nextDevice._rev = deviceDoc._rev
@@ -321,7 +329,8 @@ const DB = (() => {
         const deviceChanged = !deviceDoc ||
             String(deviceDoc.deviceId || "") !== String(nextDevice.deviceId || "") ||
             Number(deviceDoc.superConnect || 1) !== Number(nextDevice.superConnect) ||
-            Number(deviceDoc.paperWidthMm || 80) !== Number(nextDevice.paperWidthMm)
+            Number(deviceDoc.paperWidthMm || 80) !== Number(nextDevice.paperWidthMm) ||
+            String(deviceDoc.noteScontrino || "") !== String(nextDevice.noteScontrino || "")
 
         if (deviceChanged) await dbs.config.put(nextDevice)
 

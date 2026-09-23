@@ -62,8 +62,15 @@ function renderReceiptIT(r) {
         out.push({ text: "Documento Commerciale Online", align: "center" });
     }
 
-    out.push({ newline: 1 });
-    out.push({ text: "ARRIVEDERCI E GRAZIE", align: "center", bold: true });
+    const noteScontrino = String(Config.noteScontrino || "").replace(/\r\n/g, "\n");
+
+    if (noteScontrino) {
+        out.push({ newline: 1 });
+        noteScontrino.split("\n").forEach(line => {
+            out.push({ text: line, align: "center" });
+        });
+    }
+
     out.push({ newline: 5 });
 
     return out;

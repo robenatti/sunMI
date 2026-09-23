@@ -169,104 +169,6 @@ AppViews.config = (() => {
         renderDepartments()
     }
 
-    function updateCashDeleteButtons() {
-        const current = configData.config.casse || []
-        const selected = Number(document.getElementById("currentCash").value || 0)
-
-        document.querySelectorAll(".cash-delete").forEach(button => {
-            button.disabled = current.length <= 1 || Number(button.dataset.id) === selected
-        })
-    }
-
-    function renderCashes() {
-        const rows = document.getElementById("cashRows")
-        const select = document.getElementById("currentCash")
-        rows.innerHTML = ""
-        select.innerHTML = ""
-
-        const casse = configData.config.casse || []
-
-        casse.forEach(cassa => {
-            const row = document.createElement("div")
-            row.className = "cash-row"
-            row.dataset.id = cassa.id
-
-            const id = document.createElement("strong")
-            id.textContent = String(cassa.id)
-
-            const controls = document.createElement("div")
-            controls.style.display = "grid"
-            controls.style.gridTemplateColumns = "1fr auto"
-            controls.style.gap = "0.6rem"
-
-            const name = document.createElement("input")
-            name.className = "cash-name"
-            name.value = cassa.nome
-
-            const remove = document.createElement("button")
-            remove.type = "button"
-            remove.className = "btn cash-delete"
-            remove.dataset.id = cassa.id
-            remove.textContent = "ELIMINA"
-            remove.addEventListener("click", () => deleteCash(cassa.id))
-
-            controls.appendChild(name)
-            controls.appendChild(remove)
-            row.appendChild(id)
-            row.appendChild(controls)
-            rows.appendChild(row)
-
-            const option = document.createElement("option")
-            option.value = cassa.id
-            option.textContent = cassa.id + " - " + cassa.nome
-            select.appendChild(option)
-        })
-
-        select.value = String(configData.device.superConnect || 1)
-        document.getElementById("paperWidthMm").value =
-            String(Number(configData.device.paperWidthMm || Config.paperWidthMm || 80) <= 58 ? 58 : 80)
-        select.onchange = updateCashDeleteButtons
-        document.getElementById("addCash").disabled = Config.allowAddCash !== true
-        updateCashDeleteButtons()
-    }
-
-    function addCash() {
-        if (Config.allowAddCash !== true) return
-
-        const current = configData.config.casse || []
-        const max = current.reduce((m, c) => Math.max(m, Number(c.id || 0)), 0)
-        current.push({ id: max + 1, nome: "Cassa " + (max + 1) })
-        configData.config.casse = current
-        renderCashes()
-    }
-
-    function deleteCash(id) {
-        const current = configData.config.casse || []
-        if (current.length <= 1) return
-
-        const cashId = Number(id)
-        const selected = Number(document.getElementById("currentCash").value || 0)
-        if (!selected || cashId === selected) return
-
-        configData.device.superConnect = selected
-        configData.config.casse = current.filter(cassa => Number(cassa.id) !== cashId)
-        renderCashes()
-    }
-
-    async function saveCashes() {
-        const casse = Array.from(document.querySelectorAll(".cash-row")).map(row => ({
-            id: Number(row.dataset.id),
-            nome: row.querySelector(".cash-name").value.trim() || ("Cassa " + row.dataset.id)
-        }))
-
-        configData = await AppAPI.saveCasse(
-            casse,
-            document.getElementById("currentCash").value,
-            document.getElementById("paperWidthMm").value
-        )
-        renderCashes()
-    }
-
     function renderAccount() {
         const state = AppAPI.getAccountState()
         const account = state.account || {}
@@ -361,6 +263,37 @@ AppViews.config = (() => {
 
 
 
+    function renderReceiptNotes() {
+        const state = AppAPI.getAccountState()
+        const account = state.account || {}
+        const allowUser = account.allowChangeUsername === true
+        const textarea = document.getElementById("receiptNotes")
+        const saveButton = document.getElementById("saveReceiptNotes")
+
+        textarea.value = String(configData.device.noteScontrino || "")
+        textarea.disabled = !allowUser
+        saveButton.disabled = !allowUser
+
+        document.getElementById("receiptNotesPermission").textContent =
+            allowUser ? "NOTE SCONTRINO MODIFICABILI" : "NOTE SCONTRINO IN SOLA LETTURA"
+    }
+
+    async function saveReceiptNotes() {
+        const state = AppAPI.getAccountState()
+        const account = state.account || {}
+        if (account.allowChangeUsername !== true) return
+
+        const noteScontrino = document.getElementById("receiptNotes").value
+
+        configData = await AppAPI.saveDeviceConfig({
+            noteScontrino: noteScontrino
+        })
+
+        Config.noteScontrino = noteScontrino
+        renderReceiptNotes()
+    }
+
+
     function bindTabs() {
         document.querySelectorAll(".config-tab").forEach(button => {
             button.addEventListener("click", () => {
@@ -388,11 +321,9 @@ AppViews.config = (() => {
             "articlePosition",
             "departmentRows",
             "saveDepartments",
-            "currentCash",
-            "paperWidthMm",
-            "cashRows",
-            "addCash",
-            "saveCashes",
+            "receiptNotes",
+            "receiptNotesPermission",
+            "saveReceiptNotes",
             "accountHeader1",
             "accountHeader2",
             "accountHeader3",
@@ -419,7 +350,7 @@ AppViews.config = (() => {
         fillDepartmentSelect()
         renderArticleList("")
         renderDepartments()
-        renderCashes()
+        renderReceiptNotes()
         renderAccount()
         newArticle()
 
@@ -429,8 +360,7 @@ AppViews.config = (() => {
         document.getElementById("configArticleSearch").addEventListener("input", event => renderArticleList(event.target.value))
         document.getElementById("articleForm").addEventListener("submit", saveArticle)
         document.getElementById("saveDepartments").addEventListener("click", saveDepartments)
-        document.getElementById("addCash").addEventListener("click", addCash)
-        document.getElementById("saveCashes").addEventListener("click", saveCashes)
+        document.getElementById("saveReceiptNotes").addEventListener("click", saveReceiptNotes)
         document.getElementById("saveAccountConfig").addEventListener("click", saveAccountConfig)
     }
 

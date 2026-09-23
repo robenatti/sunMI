@@ -13,7 +13,7 @@
 
 .config-tabs {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     gap: 0.5rem;
 }
 
@@ -39,7 +39,26 @@
 .article-browser,
 .article-form,
 .department-editor,
-.cash-editor,
+.receipt-notes-editor,
+.receipt-notes-editor {
+    width: min(900px, 100%);
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+}
+
+.receipt-notes-editor textarea {
+    min-height: 14rem;
+    resize: vertical;
+    box-sizing: border-box;
+}
+
+.receipt-notes-editor textarea:disabled,
+.receipt-notes-editor button:disabled {
+    opacity: 0.55;
+}
+
 .password-editor {
     min-height: 0;
     background: #12141a;
@@ -118,7 +137,7 @@
 }
 
 .article-form label,
-.cash-editor label,
+.receipt-notes-editor label,
 .password-editor label {
     display: flex;
     flex-direction: column;
@@ -149,7 +168,7 @@
 }
 
 .department-editor,
-.cash-editor,
+.receipt-notes-editor,
 .password-editor {
     width: min(900px, 100%);
     margin: 0 auto;
