@@ -203,10 +203,13 @@ AppViews.config = (() => {
         document.getElementById("paperWidthMm").value =
             String(Number(configData.device.paperWidthMm || Config.paperWidthMm || 80) <= 58 ? 58 : 80)
         select.onchange = updateCashDeleteButtons
+        document.getElementById("addCash").disabled = Config.allowAddCash !== true
         updateCashDeleteButtons()
     }
 
     function addCash() {
+        if (Config.allowAddCash !== true) return
+
         const current = configData.config.casse || []
         const max = current.reduce((m, c) => Math.max(m, Number(c.id || 0)), 0)
         current.push({ id: max + 1, nome: "Cassa " + (max + 1) })
