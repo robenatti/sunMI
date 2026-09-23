@@ -244,10 +244,11 @@ AppViews.config = (() => {
     function updatePasswordButtonState() {
         const state = AppAPI.getAccountState()
         const account = state.account || {}
+        const current = document.getElementById("accountPwd").value
         const first = document.getElementById("accountPassword1").value
         const second = document.getElementById("accountPassword2").value
         document.getElementById("changePassword").disabled =
-            account.allowChangePassword !== true || !first || !second || first !== second
+            account.allowChangePassword !== true || !current || !first || !second || first !== second
     }
 
     function renderAccount() {
@@ -267,6 +268,7 @@ AppViews.config = (() => {
         document.getElementById("accountCf").value = account.cf || ""
         document.getElementById("accountPiva").value = account.piva || ""
         document.getElementById("accountPin").value = account.pin || ""
+        document.getElementById("accountPwd").value = ""
         document.getElementById("accountPassword1").value = ""
         document.getElementById("accountPassword2").value = ""
 
@@ -278,6 +280,7 @@ AppViews.config = (() => {
             document.getElementById(id).disabled = !allowUser
         })
 
+        document.getElementById("accountPwd").disabled = false
         document.getElementById("accountPassword1").disabled = !allowPassword
         document.getElementById("accountPassword2").disabled = !allowPassword
         document.getElementById("headerPermission").textContent =
@@ -311,6 +314,9 @@ AppViews.config = (() => {
             changes.pin = document.getElementById("accountPin").value.trim()
         }
 
+        const pwd = document.getElementById("accountPwd").value
+        if (pwd) changes.pwd = pwd
+
         try {
             await AppAPI.saveAccount(changes)
             window.location.reload()
@@ -324,10 +330,11 @@ AppViews.config = (() => {
         const account = state.account || {}
         if (account.allowChangePassword !== true) return
 
+        const current = document.getElementById("accountPwd").value
         const first = document.getElementById("accountPassword1").value
         const second = document.getElementById("accountPassword2").value
 
-        if (!first || first !== second) {
+        if (!current || !first || first !== second) {
             updatePasswordButtonState()
             return
         }
@@ -336,7 +343,8 @@ AppViews.config = (() => {
         button.disabled = true
 
         try {
-            await AppAPI.saveAccount({ nuovaPassword: first })
+            await AppAPI.saveAccount({ pwd: current, nuovaPassword: first })
+            document.getElementById("accountPwd").value = ""
             document.getElementById("accountPassword1").value = ""
             document.getElementById("accountPassword2").value = ""
             updatePasswordButtonState()
@@ -385,6 +393,7 @@ AppViews.config = (() => {
             "accountCf",
             "accountPiva",
             "accountPin",
+            "accountPwd",
             "accountPassword1",
             "accountPassword2",
             "changePassword",
@@ -416,6 +425,7 @@ AppViews.config = (() => {
         document.getElementById("addCash").addEventListener("click", addCash)
         document.getElementById("saveCashes").addEventListener("click", saveCashes)
         document.getElementById("saveAccountConfig").addEventListener("click", saveAccountConfig)
+        document.getElementById("accountPwd").addEventListener("input", updatePasswordButtonState)
         document.getElementById("accountPassword1").addEventListener("input", updatePasswordButtonState)
         document.getElementById("accountPassword2").addEventListener("input", updatePasswordButtonState)
         document.getElementById("changePassword").addEventListener("click", changePassword)
