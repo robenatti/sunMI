@@ -72,6 +72,10 @@ const POS = (() => {
             prezzo: roundMoney(prezzo),
             prezzobase: roundMoney(article.prezzo || 0),
             quantita: 1,
+            iva:
+                article.iva === "" || typeof article.iva === "undefined" || article.iva === null
+                    ? 22
+                    : Number(article.iva),
             tipo: article.tipo === "P" ? "P" : "S"
         };
 

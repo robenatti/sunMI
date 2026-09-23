@@ -30,6 +30,10 @@ const Catalog = (() => {
                     ? doc.prezzobase
                     : (typeof doc.prezzo !== "undefined" ? doc.prezzo : doc.valoreV)
             ),
+            iva:
+                doc.iva === "" || typeof doc.iva === "undefined" || doc.iva === null
+                    ? 22
+                    : parseNumber(doc.iva),
             reparto: Number(doc.reparto || 1),
             posizione: Number(doc.posizione || 1),
             barcode: String(doc.barcode || ""),

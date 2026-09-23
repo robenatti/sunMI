@@ -70,6 +70,10 @@ AppViews.config = (() => {
         document.getElementById("articleName").value = article.nome || ""
         document.getElementById("articleType").value = article.tipo || "S"
         document.getElementById("articlePrice").value = Number(article.prezzo || 0)
+        document.getElementById("articleVat").value =
+            article.iva === "" || typeof article.iva === "undefined" || article.iva === null
+                ? 22
+                : Number(article.iva)
         document.getElementById("articleDepartment").value = Number(article.reparto || 1)
         document.getElementById("articlePosition").value = Number(article.posizione || 1)
         document.getElementById("articleBarcode").value = article.barcode || ""
@@ -84,6 +88,7 @@ AppViews.config = (() => {
         document.getElementById("articleId").value = ""
         document.getElementById("articleRev").value = ""
         document.getElementById("articleType").value = "P"
+        document.getElementById("articleVat").value = "22"
         document.getElementById("articlePosition").value = "1"
         document.getElementById("articleActive").checked = true
     }
@@ -91,12 +96,15 @@ AppViews.config = (() => {
     async function saveArticle(event) {
         event.preventDefault()
 
+        const ivaValue = document.getElementById("articleVat").value.trim()
+
         const article = Object.assign({}, currentArticle || {}, {
             _id: document.getElementById("articleId").value || undefined,
             _rev: document.getElementById("articleRev").value || undefined,
             nome: document.getElementById("articleName").value.trim(),
             tipo: document.getElementById("articleType").value,
             prezzo: Number(document.getElementById("articlePrice").value || 0),
+            iva: ivaValue === "" ? 22 : Number(ivaValue),
             prezzobase: currentArticle && typeof currentArticle.prezzobase !== "undefined"
                 ? Number(currentArticle.prezzobase)
                 : Number(document.getElementById("articlePrice").value || 0),
@@ -391,6 +399,7 @@ AppViews.config = (() => {
             "articleName",
             "articleType",
             "articlePrice",
+            "articleVat",
             "articleDepartment",
             "articlePosition",
             "departmentRows",
