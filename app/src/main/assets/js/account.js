@@ -252,6 +252,15 @@ const Account = (() => {
         }
     }
 
+    async function auditLocalDatabase() {
+        await ensureDb()
+        const info = await db.info()
+
+        return {
+            message: DB_NAME + " - esiste - " + Number(info.doc_count || 0) + " documenti"
+        }
+    }
+
     async function checkServer() {
         if (!serverOnline) {
             if (serverError) throw new Error(serverError)
@@ -310,6 +319,7 @@ const Account = (() => {
 
     return {
         init,
+        auditLocalDatabase,
         checkServer,
         updateAccount,
         getState

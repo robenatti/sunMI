@@ -303,24 +303,61 @@ const DB = (() => {
         }
     }
 
-    async function auditRemote() {
-        if (!Config.couchdbBaseUrl) {
-            return { warning: "non configurato" }
+    async function auditLocalDatabase(key) {
+        if (!dbs || !dbs[key] || !dbNames || !dbNames[key]) {
+            throw new Error("Database locale non inizializzato: " + key)
         }
 
-        if (!remotes || !remotes.config) {
-            throw new Error("Remote CouchDB non inizializzato")
-        }
-
-        const info = await withTimeout(
-            remotes.config.info(),
-            2000,
-            "Timeout connessione CouchDB"
-        )
+        const info = await dbs[key].info()
 
         return {
-            message: "online - " + (info.db_name || dbNames.config)
+            message:
+                dbNames[key] +
+                " - esiste - " +
+                Number(info.doc_count || 0) +
+                " documenti"
         }
+    }
+
+    async function auditRemoteDatabase(key) {
+        if (!Config.couchdbBaseUrl) {
+            return { warning: "NON CONFIGURATO" }
+        }
+
+        if (!remotes || !remotes[key] || !dbNames || !dbNames[key]) {
+            throw new Error("Remote CouchDB non inizializzato: " + key)
+        }
+
+        try {
+            const info = await withTimeout(
+                remotes[key].info(),
+                2000,
+                "Timeout connessione CouchDB"
+            )
+
+            return {
+                message:
+                    (info.db_name || dbNames[key]) +
+                    " - esiste - " +
+                    Number(info.doc_count || 0) +
+                    " documenti"
+            }
+        } catch (error) {
+            if (error && Number(error.status) === 404) {
+                throw new Error(dbNames[key] + " - NON ESISTE")
+            }
+
+            return {
+                warning:
+                    dbNames[key] +
+                    " - NON RAGGIUNGIBILE" +
+                    (error && error.message ? " - " + error.message : "")
+            }
+        }
+    }
+
+    async function auditRemote() {
+        return auditRemoteDatabase("config")
     }
 
     async function getConfig() {
@@ -501,6 +538,8 @@ const DB = (() => {
     return {
         init,
         audit,
+        auditLocalDatabase,
+        auditRemoteDatabase,
         auditRemote,
         getConfig,
         saveConfig,

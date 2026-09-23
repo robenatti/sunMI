@@ -405,21 +405,46 @@ window.SystemAudit = (() => {
 
         await runStep("Server account", () => Account.checkServer(), { warning: true });
 
+        step = await runStep("Salone database", async () => {
+            const salone = String(Config.salone || "").trim();
+            if (!salone) throw new Error("Config.salone non disponibile");
+            return { message: salone };
+        });
+        if (!step.ok) failures++;
+
+        step = await runStep("DB locale bootstrap", () => Account.auditLocalDatabase());
+        if (!step.ok) failures++;
+
         let dbReady = false;
-        step = await runStep("Database locale", async () => {
+        step = await runStep("Database locale R/W", async () => {
             await DB.init();
             const result = await DB.audit();
             dbReady = true;
             return result;
         });
         if (!step.ok) failures++;
+
         if (dbReady) {
-            await runStep("Server database", () => DB.auditRemote(), { warning: true });
+            step = await runStep("DB locale magazzino", () => DB.auditLocalDatabase("magazzino"));
+            if (!step.ok) failures++;
+            step = await runStep("DB locale config", () => DB.auditLocalDatabase("config"));
+            if (!step.ok) failures++;
+            step = await runStep("DB locale ricevute", () => DB.auditLocalDatabase("receipt"));
+            if (!step.ok) failures++;
+
+            step = await runStep("DB remoto magazzino", () => DB.auditRemoteDatabase("magazzino"));
+            if (!step.ok) failures++;
+            step = await runStep("DB remoto config", () => DB.auditRemoteDatabase("config"));
+            if (!step.ok) failures++;
+            step = await runStep("DB remoto ricevute", () => DB.auditRemoteDatabase("receipt"));
+            if (!step.ok) failures++;
+
             await runStep("Replica magazzino", () => DB.auditReplication("magazzino"), { warning: true });
             await runStep("Replica configurazione", () => DB.auditReplication("config"), { warning: true });
             await runStep("Replica ricevute", () => DB.auditReplication("receipt"), { warning: true });
         } else {
-            BootTerminal.warn("Server database - non verificato perché il DB locale non è disponibile");
+            BootTerminal.warn("Database locali - non verificati perché il DB non è disponibile");
+            BootTerminal.warn("Database remoti - non verificati perché il DB locale non è disponibile");
             BootTerminal.warn("Repliche - non verificate perché il DB locale non è disponibile");
         }
 
