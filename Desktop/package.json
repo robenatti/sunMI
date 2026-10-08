@@ -1,0 +1,14 @@
+{
+    "name": "solx-pos-desktop",
+    "version": "2.5.0",
+    "main": "index.html",
+    "inject_js_start": "platform/nw-bridge.js",
+    "window": {
+        "title": "SolX POS",
+        "width": 1100,
+        "height": 800,
+        "min_width": 900,
+        "min_height": 650,
+        "position": "center"
+    }
+}
