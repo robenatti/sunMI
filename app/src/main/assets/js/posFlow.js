@@ -274,13 +274,22 @@ const POS = (() => {
     async function printStoredReceipt(receipt) {
         if (!receipt) return { receipt: receipt, error: new Error("Ricevuta non disponibile") }
 
+        const device = await DB.getDeviceConfig()
+        if (Number(device.paperWidthMm) === 0) {
+            if (receipt.printStatus !== "SKIPPED") {
+                receipt.printStatus = "SKIPPED"
+                receipt.lastPrintError = ""
+                receipt = await DB.saveReceipt(receipt)
+            }
+            return { receipt: receipt, error: null, skipped: true }
+        }
+
         receipt.printStatus = "PENDING"
         receipt.lastPrintTry = new Date().toISOString()
         receipt.lastPrintError = ""
         receipt = await DB.saveReceipt(receipt)
 
         try {
-            const device = await DB.getDeviceConfig()
             const printData = renderReceiptIT(Object.assign({}, receipt, {
                 data: receipt.data,
                 ora: receipt.ora
@@ -288,7 +297,7 @@ const POS = (() => {
 
             await Bridge.exec("print", {
                 lines: printData,
-                paperWidthMm: Number(device.paperWidthMm || Config.paperWidthMm || 80)
+                paperWidthMm: Number(device.paperWidthMm) <= 58 ? 58 : 80
             }, Config.printTimeoutMs || 60000)
 
             receipt.printStatus = "OK"
@@ -381,7 +390,8 @@ const POS = (() => {
                 error: fiscalResult.error ? errorMessage(fiscalResult.error) : ""
             });
 
-            emit("print:start", { receipt: receipt });
+            const noPrint = Number((await DB.getDeviceConfig()).paperWidthMm) === 0;
+            if (!noPrint) emit("print:start", { receipt: receipt });
             const printResult = await printStoredReceipt(receipt);
             receipt = printResult.receipt;
 
@@ -391,7 +401,7 @@ const POS = (() => {
                     message: errorMessage(printResult.error)
                 });
             } else {
-                emit("print:end", { receipt: receipt });
+                emit("print:end", { receipt: receipt, skipped: printResult.skipped === true });
             }
 
             emit("payment:end", {

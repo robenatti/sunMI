@@ -67,19 +67,40 @@
         var file = path.join(dataDir, 'desktop-device-id.txt');
         try {
             var existing = String(fs.readFileSync(file, 'utf8')).trim();
-            if (/^PC-[a-f0-9]{32}$/i.test(existing)) return existing;
+            if (/^pc-[a-f0-9]{32}$/i.test(existing)) {
+                var normalized = existing.toLowerCase();
+                if (existing !== normalized) fs.writeFileSync(file, normalized + '\n', { mode: 0o600 });
+                return normalized;
+            }
         } catch (e) {}
 
         var hardware = hardwareIdentifier();
         var id = hardware
-            ? 'PC-' + crypto.createHash('sha256').update('solx-pos-desktop/v1|' + hardware.toLowerCase()).digest('hex').slice(0, 32)
-            : 'PC-' + crypto.randomBytes(16).toString('hex');
+            ? 'pc-' + crypto.createHash('sha256').update('solx-pos-desktop/v1|' + hardware.toLowerCase()).digest('hex').slice(0, 32)
+            : 'pc-' + crypto.randomBytes(16).toString('hex');
         // Persist the assigned ID so it remains stable across app updates.
         fs.writeFileSync(file, id + '\n', { flag: 'w', mode: 0o600 });
         return id;
     }
 
     var id = deviceId();
+
+    // Chromium can reject fetch() for file:// pages: load bundled views locally.
+    var originalFetch = window.fetch.bind(window);
+    window.fetch = function (resource, options) {
+        if (typeof resource === 'string' &&
+            /^views\/(cassa|config|riepilogo)\/[a-zA-Z0-9._-]+\.(html|css)$/.test(resource)) {
+            return fs.promises.readFile(path.join(nw.App.startPath, resource)).then(function (contents) {
+                return new Response(contents, {
+                    status: 200,
+                    headers: { 'Content-Type': resource.endsWith('.css') ? 'text/css' : 'text/html' }
+                });
+            }).catch(function () {
+                return new Response('File non trovato: ' + resource, { status: 404 });
+            });
+        }
+        return originalFetch(resource, options);
+    };
 
     // Same asynchronous request/response contract as the Android native bridge.
     // No fake print success: unsupported hardware operations return an error.

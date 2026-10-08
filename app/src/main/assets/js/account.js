@@ -98,6 +98,7 @@ const Account = (() => {
         Config.allowChangeUsername = account.allowChangeUsername === true
         Config.allowChangePassword = account.allowChangePassword === true
         Config.allowAddCash = account.allowAddCash === true
+        Config.admin = !!(currentDevice && currentDevice.admin === true)
 
         if (account.intestazione) {
             Config.intestazione = Object.assign({}, Config.intestazione || {}, account.intestazione)
@@ -109,8 +110,10 @@ const Account = (() => {
         if (currentDevice) {
             if (currentDevice.cassa) Config.superConnect = Number(currentDevice.cassa)
             if (currentDevice.superConnect) Config.superConnect = Number(currentDevice.superConnect)
-            if (currentDevice.paperWidthMm)
-                Config.paperWidthMm = Number(currentDevice.paperWidthMm) <= 58 ? 58 : 80
+            if (typeof currentDevice.paperWidthMm !== "undefined" && currentDevice.paperWidthMm !== null) {
+                const width = Number(currentDevice.paperWidthMm)
+                Config.paperWidthMm = width === 0 ? 0 : width <= 58 ? 58 : 80
+            }
         }
     }
 
@@ -131,6 +134,13 @@ const Account = (() => {
 
         if (local && local.deviceId) {
             deviceId = String(local.deviceId)
+            if (/^PC-[a-f0-9]{32}$/i.test(deviceId)) {
+                deviceId = deviceId.toLowerCase()
+                if (deviceId !== local.deviceId) {
+                    local.deviceId = deviceId
+                    await db.put(local)
+                }
+            }
             return deviceId
         }
 
@@ -140,7 +150,7 @@ const Account = (() => {
             nativeId = String(hardware && hardware.deviceId || "").trim()
         } catch (e) {}
 
-        deviceId = nativeId || uuid()
+        deviceId = /^PC-[a-f0-9]{32}$/i.test(nativeId) ? nativeId.toLowerCase() : (nativeId || uuid())
 
         await db.put({
             _id: DEVICE_ID,

@@ -384,7 +384,9 @@ AppViews.cassa = (() => {
         unsubscribers.push(AppAPI.on("pos:fiscal:start", () => showProgress("Collegamento al cassetto fiscale...", 30)));
         unsubscribers.push(AppAPI.on("pos:fiscal:end", detail => {
             if (detail && detail.error) {
-                showProgress("Fiscalizzazione non disponibile. Stampa documento provvisorio...", 60, true);
+                showProgress(Number(Config.paperWidthMm) === 0
+                    ? "Fiscalizzazione non disponibile. Documento in attesa..."
+                    : "Fiscalizzazione non disponibile. Stampa documento provvisorio...", 60, true);
             } else {
                 showProgress("Documento registrato...", 60);
             }

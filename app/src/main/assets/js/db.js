@@ -303,9 +303,13 @@ const DB = (() => {
             ? Number(accountDevice.cassa || accountDevice.superConnect)
             : Number(deviceDoc && deviceDoc.superConnect || Config.superConnect || 1)
 
-        const paperWidthMm = accountDevice && accountDevice.paperWidthMm
-            ? (Number(accountDevice.paperWidthMm) <= 58 ? 58 : 80)
-            : (Number(deviceDoc && deviceDoc.paperWidthMm || Config.paperWidthMm || 80) <= 58 ? 58 : 80)
+        const widthValue = accountDevice && accountDevice.paperWidthMm != null
+            ? accountDevice.paperWidthMm
+            : deviceDoc && deviceDoc.paperWidthMm != null
+                ? deviceDoc.paperWidthMm
+                : Config.paperWidthMm
+        const width = Number(widthValue)
+        const paperWidthMm = width === 0 ? 0 : width <= 58 ? 58 : 80
 
         const noteScontrino =
             accountDevice && typeof accountDevice.noteScontrino !== "undefined"
@@ -329,7 +333,7 @@ const DB = (() => {
         const deviceChanged = !deviceDoc ||
             String(deviceDoc.deviceId || "") !== String(nextDevice.deviceId || "") ||
             Number(deviceDoc.superConnect || 1) !== Number(nextDevice.superConnect) ||
-            Number(deviceDoc.paperWidthMm || 80) !== Number(nextDevice.paperWidthMm) ||
+            Number(deviceDoc.paperWidthMm != null ? deviceDoc.paperWidthMm : 80) !== Number(nextDevice.paperWidthMm) ||
             String(deviceDoc.noteScontrino || "") !== String(nextDevice.noteScontrino || "")
 
         if (deviceChanged) await dbs.config.put(nextDevice)

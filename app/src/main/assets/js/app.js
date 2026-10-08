@@ -138,7 +138,7 @@ const AppAPI = (() => {
         await Catalog.saveCasse(casse);
         await DB.saveDeviceConfig({
             superConnect: Number(superConnect || 1),
-            paperWidthMm: Number(paperWidthMm || 80) <= 58 ? 58 : 80
+            paperWidthMm: Number(paperWidthMm) === 0 ? 0 : Number(paperWidthMm) <= 58 ? 58 : 80
         });
         return getConfig();
     }

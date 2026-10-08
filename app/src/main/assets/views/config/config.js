@@ -189,8 +189,10 @@ AppViews.config = (() => {
 
         document.getElementById("accountCash").value =
             String(Number(configData.device.superConnect || 1))
+        const width = Number(configData.device.paperWidthMm != null
+            ? configData.device.paperWidthMm : Config.paperWidthMm)
         document.getElementById("accountPaperWidthMm").value =
-            String(Number(configData.device.paperWidthMm || Config.paperWidthMm || 80) <= 58 ? 58 : 80)
+            String(width === 0 ? 0 : width <= 58 ? 58 : 80)
 
         ;["accountHeader1", "accountHeader2", "accountHeader3", "accountHeader4", "accountHeader5"].forEach(id => {
             document.getElementById(id).disabled = !allowHeader

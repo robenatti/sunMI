@@ -8,6 +8,7 @@ if (true) {
     Config.accountServerUrl = "http://trbl.it:7811";
     Config.accountTimeoutMs = 2000;
     Config.paperWidthMm = 80;
+    Config.admin = false;
     Config.piva = "02881040360";
 
     Config.dataScadenza = "31/08/2027";

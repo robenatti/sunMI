@@ -218,7 +218,15 @@ AppViews.riepilogo = (() => {
         const currentCash = Number(device.superConnect || Config.superConnect || 1)
         const configuredCashes = AppAPI.getCasse()
 
-        ;[1, 2, 3].forEach(id => {
+        const state = AppAPI.getAccountState()
+        const admin = !!(state.device && state.device.admin === true)
+        const cashIds = admin
+            ? Array.from(new Set([1, 2, 3, currentCash].concat(configuredCashes.map(item => Number(item.id)))))
+                .filter(id => Number.isFinite(id) && id > 0)
+                .sort((a, b) => a - b)
+            : [currentCash]
+
+        cashIds.forEach(id => {
             const cassa = configuredCashes.find(item => Number(item.id) === id) || {
                 id: id,
                 nome: "Cassa " + id
@@ -232,8 +240,9 @@ AppViews.riepilogo = (() => {
             input.type = "checkbox"
             input.className = "cash-check"
             input.value = cassa.id
-            input.checked = id === currentCash
-            input.disabled = true
+            input.checked = admin || id === currentCash
+            input.disabled = !admin
+            if (admin) input.addEventListener("change", refresh)
 
             const text = document.createElement("span")
             text.textContent = cassa.nome
