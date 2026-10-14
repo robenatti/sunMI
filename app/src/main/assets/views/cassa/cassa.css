@@ -392,3 +392,44 @@
 .progress-popup.error .progress-fill {
     background: #6f2a2a;
 }
+
+.connection-light {
+    display: inline-block;
+    width: 1rem;
+    height: 1rem;
+    margin-left: 0.6rem;
+    vertical-align: middle;
+    border: 2px solid rgba(255,255,255,0.4);
+    border-radius: 50%;
+}
+.connection-light.standby { background: #dfad22; }
+.connection-light.online { background: #21aa52; }
+.connection-light.offline { background: #d63838; }
+
+.network-popup {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1200;
+    background: rgba(0,0,0,0.82);
+}
+.network-popup.show { display: flex; }
+.network-box {
+    box-sizing: border-box;
+    width: min(92vw, 560px);
+    padding: 1.4rem;
+    background: #17191d;
+    border: 2px solid #994444;
+    border-radius: 0.7rem;
+    color: white;
+}
+.network-title { text-align: center; font-weight: 700; font-size: 1.15rem; color: #ff8585; margin-bottom: 1rem; }
+.network-message, .network-error { text-align: center; margin-bottom: 0.8rem; }
+.network-error { color: #ffaaaa; min-height: 1.5rem; }
+.network-confirm { display: flex; align-items: center; gap: 0.7rem; margin: 1.3rem 0; }
+.network-confirm input { width: 1.5rem; height: 1.5rem; }
+.network-buttons { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.6rem; }
+.network-buttons button { padding: 0.9rem; color: white; background: #343b45; border: 1px solid #737b85; border-radius: 0.4rem; font-weight: 700; }
+.network-buttons button:disabled { opacity: 0.35; }

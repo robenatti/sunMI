@@ -10,6 +10,8 @@ const POS = (() => {
     let recoveryTimer = null;
     let recoveryRunning = false;
     let fiscalLocks = new Map();
+    let connectionStatus = "STANDBY";
+    let connectionAttempt = 0;
 
     function clone(value) {
         return JSON.parse(JSON.stringify(value));
@@ -45,6 +47,21 @@ const POS = (() => {
         });
     }
 
+    function setConnectionStatus(status) {
+        connectionStatus = status;
+        emit("connection:status", { status });
+    }
+
+    function startPrepare() {
+        const attempt = ++connectionAttempt;
+        setConnectionStatus("STANDBY");
+        Fiscal.prepareIT().then(() => {
+            if (attempt === connectionAttempt) setConnectionStatus("ONLINE");
+        }).catch(() => {
+            if (attempt === connectionAttempt) setConnectionStatus("OFFLINE");
+        });
+    }
+
     function recalc() {
         total = roundMoney(items.reduce((sum, item) => {
             return sum + Number(item.prezzo || 0) * quantityOf(item);
@@ -56,7 +73,8 @@ const POS = (() => {
         return {
             items: clone(items),
             total: total,
-            paymentRunning: paymentRunning
+            paymentRunning: paymentRunning,
+            connectionStatus: connectionStatus
         };
     }
 
@@ -88,7 +106,7 @@ const POS = (() => {
 
         if (items.length === 1 && !prepared) {
             prepared = true;
-            Fiscal.prepareIT().catch(() => {});
+            startPrepare();
         }
 
         recalc();
@@ -183,6 +201,9 @@ const POS = (() => {
         const now = new Date();
         const parts = localDateParts(now);
         const device = await DB.getDeviceConfig();
+        const account = Account.getState();
+        const deviceId = String(account.deviceId || device.deviceId || "").toLowerCase();
+        if (!deviceId) throw new Error("Device ID non disponibile");
         const superConnect = Number(device.superConnect || 1);
         const numero = await DB.nextReceiptNumber(superConnect);
         const righe = clone(items);
@@ -215,6 +236,7 @@ const POS = (() => {
             totServizi: totServizi,
             totProdotti: totProdotti,
             superConnect: superConnect,
+            deviceId: deviceId,
             fiscalStatus: "PENDING",
             printStatus: "PENDING",
             annullata: false,
@@ -229,6 +251,14 @@ const POS = (() => {
         return error && error.message ? error.message : String(error || "Errore")
     }
 
+    function belongsToCurrentCash(receipt, device) {
+        const account = Account.getState();
+        const currentId = String(account.deviceId || device && device.deviceId || "").toLowerCase();
+        return !!currentId &&
+            String(receipt && receipt.deviceId || "").toLowerCase() === currentId &&
+            Number(receipt && receipt.superConnect) === Number(device && device.superConnect || 1);
+    }
+
     async function fiscalizeStoredReceipt(receipt) {
         if (!receipt || receipt.fiscalStatus === "OK") {
             return { receipt: receipt, error: null }
@@ -238,6 +268,7 @@ const POS = (() => {
         if (receiptId && fiscalLocks.has(receiptId))
             return fiscalLocks.get(receiptId)
 
+        const attempt = ++connectionAttempt
         const work = (async () => {
             receipt.fiscalStatus = "PENDING"
             receipt.lastFiscalTry = new Date().toISOString()
@@ -251,12 +282,14 @@ const POS = (() => {
                 receipt.fiscalStatus = "OK"
                 receipt.lastFiscalError = ""
                 receipt = await DB.saveReceipt(receipt)
+                if (attempt === connectionAttempt) setConnectionStatus("ONLINE")
 
                 return { receipt: receipt, error: null }
             } catch (error) {
                 receipt.fiscalStatus = "ERROR"
                 receipt.lastFiscalError = errorMessage(error)
                 receipt = await DB.saveReceipt(receipt)
+                if (attempt === connectionAttempt) setConnectionStatus("OFFLINE")
 
                 return { receipt: receipt, error: error }
             }
@@ -275,6 +308,9 @@ const POS = (() => {
         if (!receipt) return { receipt: receipt, error: new Error("Ricevuta non disponibile") }
 
         const device = await DB.getDeviceConfig()
+        if (!belongsToCurrentCash(receipt, device))
+            return { receipt: receipt, error: new Error("Ricevuta di altro dispositivo o cassa") }
+
         if (Number(device.paperWidthMm) === 0) {
             if (receipt.printStatus !== "SKIPPED") {
                 receipt.printStatus = "SKIPPED"
@@ -314,13 +350,52 @@ const POS = (() => {
         }
     }
 
+    async function retryFiscalAndPrint(id) {
+        let receipt = await DB.getReceipt(id)
+        const device = await DB.getDeviceConfig()
+        if (!belongsToCurrentCash(receipt, device)) throw new Error("Ricevuta di altro dispositivo o cassa")
+        if (receipt.annullata === true) throw new Error("Ricevuta annullata")
+
+        const fiscalResult = await fiscalizeStoredReceipt(receipt)
+        receipt = fiscalResult.receipt
+        if (fiscalResult.error)
+            return { receipt: receipt, fiscalError: errorMessage(fiscalResult.error) }
+
+        if (receipt.printStatus === "OK" || receipt.printStatus === "SKIPPED")
+            return { receipt: receipt }
+
+        const printResult = await printStoredReceipt(receipt)
+        return {
+            receipt: printResult.receipt,
+            printError: printResult.error ? errorMessage(printResult.error) : ""
+        }
+    }
+
+    async function printAnyway(id) {
+        const receipt = await DB.getReceipt(id)
+        const device = await DB.getDeviceConfig()
+        if (!belongsToCurrentCash(receipt, device)) throw new Error("Ricevuta di altro dispositivo o cassa")
+        if (receipt.annullata === true) throw new Error("Ricevuta annullata")
+        if (receipt.printStatus === "OK" || receipt.printStatus === "SKIPPED")
+            return { receipt: receipt }
+
+        const result = await printStoredReceipt(receipt)
+        return {
+            receipt: result.receipt,
+            printError: result.error ? errorMessage(result.error) : ""
+        }
+    }
+
     async function retryReceipt(id) {
         let receipt = await DB.getReceipt(id)
-        if (!receipt || receipt.annullata === true) return receipt
+        const device = await DB.getDeviceConfig()
+        if (!belongsToCurrentCash(receipt, device)) throw new Error("Ricevuta di altro dispositivo o cassa")
+        if (receipt.annullata === true) return receipt
 
         if (receipt.fiscalStatus !== "OK") {
             const fiscalResult = await fiscalizeStoredReceipt(receipt)
             receipt = fiscalResult.receipt
+            if (fiscalResult.error) return receipt
         }
 
         const printResult = await printStoredReceipt(receipt)
@@ -339,14 +414,13 @@ const POS = (() => {
         recoveryRunning = true
 
         try {
-            const pending = await DB.getPendingFiscalReceipts()
-
-            for (const pendingReceipt of pending) {
-                const result = await fiscalizeStoredReceipt(pendingReceipt)
-
-                if (!result.error && result.receipt && result.receipt.fiscalStatus === "OK") {
-                    await printStoredReceipt(result.receipt)
-                }
+            const device = await DB.getDeviceConfig()
+            const account = Account.getState()
+            const currentId = String(account.deviceId || device.deviceId || "").toLowerCase()
+            const pending = await DB.getPendingFiscalReceipts(currentId, device.superConnect)
+            for (const receipt of pending) {
+                if (!belongsToCurrentCash(receipt, device)) continue
+                await fiscalizeStoredReceipt(receipt)
             }
         } finally {
             recoveryRunning = false
@@ -390,10 +464,13 @@ const POS = (() => {
                 error: fiscalResult.error ? errorMessage(fiscalResult.error) : ""
             });
 
-            const noPrint = Number((await DB.getDeviceConfig()).paperWidthMm) === 0;
-            if (!noPrint) emit("print:start", { receipt: receipt });
-            const printResult = await printStoredReceipt(receipt);
-            receipt = printResult.receipt;
+            let printResult = { receipt: receipt, error: null, skipped: true };
+            if (!fiscalResult.error) {
+                const noPrint = Number((await DB.getDeviceConfig()).paperWidthMm) === 0;
+                if (!noPrint) emit("print:start", { receipt: receipt });
+                printResult = await printStoredReceipt(receipt);
+                receipt = printResult.receipt;
+            }
 
             if (printResult.error) {
                 emit("print:error", {
@@ -432,6 +509,8 @@ const POS = (() => {
         reset: reset,
         pay: pay,
         retryReceipt: retryReceipt,
+        retryFiscalAndPrint: retryFiscalAndPrint,
+        printAnyway: printAnyway,
         cancelReceipt: cancelReceipt,
         retryPendingFiscalization: retryPendingFiscalization,
         startRecovery: startRecovery

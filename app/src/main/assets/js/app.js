@@ -29,7 +29,7 @@ const AppAPI = (() => {
         if (initialized) return;
         await DB.init();
         await Catalog.init();
-        ["change", "reset", "payment:start", "payment:empty", "fiscal:start", "fiscal:end", "receipt:saved", "print:start", "print:end", "print:error", "payment:end", "error"].forEach(name => {
+        ["change", "reset", "connection:status", "payment:start", "payment:empty", "fiscal:start", "fiscal:end", "receipt:saved", "print:start", "print:end", "print:error", "payment:end", "error"].forEach(name => {
             posUnsubscribers.push(POS.on(name, detail => emit("pos:" + name, detail)));
         });
         Barcode.start();
@@ -156,6 +156,14 @@ const AppAPI = (() => {
         return POS.retryReceipt(id);
     }
 
+    async function retryFiscalAndPrint(id) {
+        return POS.retryFiscalAndPrint(id);
+    }
+
+    async function printAnyway(id) {
+        return POS.printAnyway(id);
+    }
+
     async function cancelReceipt(id) {
         return POS.cancelReceipt(id);
     }
@@ -203,6 +211,8 @@ const AppAPI = (() => {
         getDeviceConfig,
         saveDeviceConfig,
         retryReceipt,
+        retryFiscalAndPrint,
+        printAnyway,
         cancelReceipt,
         getAccountState,
         saveAccount

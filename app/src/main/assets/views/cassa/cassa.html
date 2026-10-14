@@ -81,7 +81,7 @@
     </div>
 
     <div class="footer">
-        <div class="brand-box">AltraCassa <span class="app-version" id="appVersion"></span></div>
+        <div class="brand-box">AltraCassa <span class="app-version" id="appVersion"></span> <span class="connection-light standby" id="connectionLight" role="status" title="Rete standby" aria-label="Rete standby"></span></div>
         <button class="btn action tool" id="openConfig" title="Configurazione">⚙</button>
         <button class="btn action tool" id="openSummary" title="Riepilogo">☷</button>
         <button class="btn action contanti" id="cashPayment">CONTANTI</button>
@@ -95,5 +95,19 @@
         <div class="progress-message" id="progressMessage">Preparazione operazione...</div>
         <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
         <div class="progress-percent" id="progressPercent">0%</div>
+    </div>
+</div>
+
+<div class="network-popup" id="networkPopup" role="dialog" aria-modal="true" aria-labelledby="networkPopupTitle">
+    <div class="network-box">
+        <div class="network-title" id="networkPopupTitle">SERVIZIO FISCALE NON DISPONIBILE</div>
+        <div class="network-message">Fiscalizzazione non riuscita. Puoi riprovare o stampare un documento provvisorio.</div>
+        <div class="network-error" id="networkError"></div>
+        <label class="network-confirm"><input id="networkConfirm" type="checkbox"> Confermo di voler stampare senza fiscalizzazione immediata.</label>
+        <div class="network-buttons">
+            <button type="button" id="networkRetry">RIPROVA</button>
+            <button type="button" id="networkPrint" disabled>STAMPA LO STESSO</button>
+            <button type="button" id="networkCancel">ANNULLA</button>
+        </div>
     </div>
 </div>

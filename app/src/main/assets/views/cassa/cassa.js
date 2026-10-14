@@ -11,6 +11,8 @@ AppViews.cassa = (() => {
     let cancelTimer = null;
     let unsubscribers = [];
     let lastItemCount = 0;
+    let pendingReceiptId = "";
+    let networkBusy = false;
 
     function money(value, euro) {
         const text = Number(value || 0).toLocaleString("it-IT", {
@@ -337,6 +339,40 @@ AppViews.cassa = (() => {
         document.getElementById("progressPercent").textContent = String(percent) + "%";
     }
 
+    function updateConnectionLight(status) {
+        const light = document.getElementById("connectionLight");
+        if (!light) return;
+        const value = String(status || "STANDBY").toUpperCase();
+        light.className = "connection-light " + (value === "ONLINE" ? "online" : value === "OFFLINE" ? "offline" : "standby");
+        light.title = "Servizio fiscale: " + value;
+        light.setAttribute("aria-label", light.title);
+    }
+
+    function showNetworkPopup(receipt, message) {
+        pendingReceiptId = String(receipt && receipt._id || "");
+        networkBusy = false;
+        document.getElementById("progressPopup").classList.remove("show", "error");
+        document.getElementById("networkError").textContent = message || "";
+        document.getElementById("networkConfirm").checked = false;
+        document.getElementById("networkPrint").disabled = true;
+        document.getElementById("networkRetry").disabled = false;
+        document.getElementById("networkCancel").disabled = false;
+        document.getElementById("networkPopup").classList.add("show");
+    }
+
+    function closeNetworkPopup() {
+        pendingReceiptId = "";
+        document.getElementById("networkPopup").classList.remove("show");
+    }
+
+    function setNetworkBusy(value) {
+        networkBusy = value;
+        document.getElementById("networkRetry").disabled = value;
+        document.getElementById("networkCancel").disabled = value;
+        document.getElementById("networkConfirm").disabled = value;
+        document.getElementById("networkPrint").disabled = value || !document.getElementById("networkConfirm").checked;
+    }
+
     function bind() {
         document.getElementById("quantityBox").addEventListener("click", () => selectInput("quantity"));
         document.getElementById("amountBox").addEventListener("click", () => selectInput("amount"));
@@ -358,12 +394,52 @@ AppViews.cassa = (() => {
         document.getElementById("cancelSale").addEventListener("click", cancel);
         document.getElementById("cashPayment").addEventListener("click", () => AppAPI.pay("CA").catch(() => {}));
         document.getElementById("cardPayment").addEventListener("click", () => AppAPI.pay("CC").catch(() => {}));
+        document.getElementById("networkConfirm").addEventListener("change", event => {
+            document.getElementById("networkPrint").disabled = networkBusy || !event.target.checked;
+        });
+        document.getElementById("networkCancel").addEventListener("click", () => {
+            if (!networkBusy) closeNetworkPopup();
+        });
+        document.getElementById("networkRetry").addEventListener("click", async () => {
+            if (!pendingReceiptId || networkBusy) return;
+            const id = pendingReceiptId;
+            setNetworkBusy(true);
+            document.getElementById("networkError").textContent = "Nuovo tentativo di fiscalizzazione...";
+            try {
+                const result = await AppAPI.retryFiscalAndPrint(id);
+                if (result.fiscalError) {
+                    document.getElementById("networkError").textContent = result.fiscalError;
+                } else {
+                    closeNetworkPopup();
+                    if (result.printError) showProgress("Errore stampa: " + result.printError, 100, true);
+                    else showProgress("Operazione completata", 100);
+                    if (!result.printError) setTimeout(() => document.getElementById("progressPopup").classList.remove("show", "error"), 600);
+                }
+            } catch (e) {
+                document.getElementById("networkError").textContent = e.message || String(e);
+            } finally {
+                setNetworkBusy(false);
+            }
+        });
+        document.getElementById("networkPrint").addEventListener("click", async () => {
+            if (!pendingReceiptId || networkBusy || !document.getElementById("networkConfirm").checked) return;
+            setNetworkBusy(true);
+            try {
+                const result = await AppAPI.printAnyway(pendingReceiptId);
+                closeNetworkPopup();
+                if (result.printError) showProgress("Errore stampa: " + result.printError, 100, true);
+            } catch (e) {
+                document.getElementById("networkError").textContent = e.message || String(e);
+            } finally {
+                setNetworkBusy(false);
+            }
+        });
         document.getElementById("openConfig").addEventListener("click", () => Router.open("config"));
         document.getElementById("openSummary").addEventListener("click", () => Router.open("riepilogo"));
     }
 
     async function audit(root) {
-        const ids = ["reparti", "articoliBottoni", "articoliListaPanel", "articleSearch", "articoliLista", "carrello", "lineCount", "articleCount", "totalValue", "quantityBox", "quantityDisplay", "amountBox", "selectedPrice", "keypad", "deleteItem", "discountItem", "cancelSale", "openConfig", "openSummary", "cashPayment", "cardPayment", "progressPopup", "appVersion"];
+        const ids = ["reparti", "articoliBottoni", "articoliListaPanel", "articleSearch", "articoliLista", "carrello", "lineCount", "articleCount", "totalValue", "quantityBox", "quantityDisplay", "amountBox", "selectedPrice", "keypad", "deleteItem", "discountItem", "cancelSale", "openConfig", "openSummary", "cashPayment", "cardPayment", "progressPopup", "appVersion", "connectionLight", "networkPopup", "networkConfirm", "networkRetry", "networkPrint", "networkCancel"];
         const missing = ids.filter(id => !root.querySelector("#" + id));
         if (missing.length) throw new Error("Elementi DOM mancanti: " + missing.join(", "));
         return { ok: true, elements: ids.length };
@@ -377,6 +453,8 @@ AppViews.cassa = (() => {
         renderReparti();
         renderCart();
         bind();
+        updateConnectionLight(state().connectionStatus);
+        unsubscribers.push(AppAPI.on("pos:connection:status", detail => updateConnectionLight(detail.status)));
         unsubscribers.push(AppAPI.on("pos:change", renderCart));
         unsubscribers.push(AppAPI.on("pos:payment:empty", () => alert("Nessun articolo inserito")));
         unsubscribers.push(AppAPI.on("barcode:notfound", detail => alert("Barcode non trovato: " + detail.code)));
@@ -386,7 +464,7 @@ AppViews.cassa = (() => {
             if (detail && detail.error) {
                 showProgress(Number(Config.paperWidthMm) === 0
                     ? "Fiscalizzazione non disponibile. Documento in attesa..."
-                    : "Fiscalizzazione non disponibile. Stampa documento provvisorio...", 60, true);
+                    : "Fiscalizzazione non disponibile. Conferma necessaria per la stampa provvisoria.", 60, true);
             } else {
                 showProgress("Documento registrato...", 60);
             }
@@ -396,12 +474,7 @@ AppViews.cassa = (() => {
         unsubscribers.push(AppAPI.on("pos:print:error", detail => showProgress("Vendita registrata. Errore stampa: " + detail.message, 100, true)));
         unsubscribers.push(AppAPI.on("pos:payment:end", detail => {
             if (detail.fiscalError) {
-                showProgress("Ricevuta salvata. Fiscalizzazione in attesa: nuovo tentativo automatico.", 100, true);
-
-                setTimeout(() => {
-                    document.getElementById("progressPopup").classList.remove("show", "error");
-                }, 1500);
-
+                showNetworkPopup(detail.receipt, detail.receipt && detail.receipt.lastFiscalError);
                 return;
             }
 

@@ -576,17 +576,22 @@ const DB = (() => {
         return normalizeReceipt(await dbs.receipt.get(id))
     }
 
-    async function getPendingFiscalReceipts() {
-        const result = await dbs.receipt.allDocs({ include_docs: true })
+    async function getPendingFiscalReceipts(deviceId, superConnect) {
+        const origin = String(deviceId || "").toLowerCase()
+        if (!origin) return []
 
+        const result = await dbs.receipt.allDocs({ include_docs: true })
         return result.rows
-            .map(row => normalizeReceipt(row.doc))
+            .map(row => row.doc)
             .filter(doc =>
                 doc &&
                 doc.documento === "Ricevuta" &&
                 doc.annullata !== true &&
-                doc.fiscalStatus !== "OK"
+                (doc.fiscalStatus === "PENDING" || doc.fiscalStatus === "ERROR") &&
+                String(doc.deviceId || "").toLowerCase() === origin &&
+                Number(doc.superConnect) === Number(superConnect)
             )
+            .map(normalizeReceipt)
             .sort((a, b) => String(a.timestamp || "").localeCompare(String(b.timestamp || "")))
     }
 

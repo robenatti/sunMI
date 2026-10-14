@@ -12,7 +12,11 @@ const Fiscal = (() => {
 
     async function prepareIT() {
         const paramS = "action=prepare&idc=" + encodeURIComponent(getIdc())
-        const res = await fetch(urlIT + "?" + paramS)
+        const controller = new AbortController()
+        const timer = setTimeout(() => controller.abort(), 6000)
+        let res
+        try { res = await fetch(urlIT + "?" + paramS, { signal: controller.signal }) }
+        finally { clearTimeout(timer) }
         if (!res.ok) throw new Error("HTTP " + res.status)
         return res.json()
     }
