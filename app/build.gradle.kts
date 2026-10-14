@@ -1,45 +1,6 @@
-import java.net.URI
-import java.nio.file.Files
-import java.nio.file.StandardCopyOption
-
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
-}
-
-val pouchDbVersion = "9.0.0"
-val pouchDbAssetsDir = layout.buildDirectory.dir("generated/pouchdbAssets")
-val pouchDbAssetFile = pouchDbAssetsDir.map {
-    it.file("js/vendor/pouchdb-$pouchDbVersion.min.js")
-}
-val pouchDbCacheFile = File(
-    gradle.gradleUserHomeDir,
-    "caches/sunmi-pouchdb/pouchdb-$pouchDbVersion.min.js"
-)
-
-val preparePouchDbAsset by tasks.registering {
-    outputs.file(pouchDbAssetFile)
-
-    doLast {
-        if (!pouchDbCacheFile.exists()) {
-            pouchDbCacheFile.parentFile.mkdirs()
-
-            URI(
-                "https://github.com/apache/pouchdb/releases/download/" +
-                    "$pouchDbVersion/pouchdb-$pouchDbVersion.min.js"
-            ).toURL().openStream().use { input ->
-                Files.copy(
-                    input,
-                    pouchDbCacheFile.toPath(),
-                    StandardCopyOption.REPLACE_EXISTING
-                )
-            }
-        }
-
-        val output = pouchDbAssetFile.get().asFile
-        output.parentFile.mkdirs()
-        pouchDbCacheFile.copyTo(output, overwrite = true)
-    }
 }
 
 android {
@@ -54,10 +15,6 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-    }
-
-    sourceSets {
-        getByName("main").assets.srcDir(pouchDbAssetsDir)
     }
 
     buildTypes {
@@ -76,10 +33,6 @@ android {
     kotlinOptions {
         jvmTarget = "11"
     }
-}
-
-tasks.named("preBuild").configure {
-    dependsOn(preparePouchDbAsset)
 }
 
 dependencies {
