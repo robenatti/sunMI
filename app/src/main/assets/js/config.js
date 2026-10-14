@@ -115,7 +115,7 @@ if (true) {
         reparti: ["", "PIEGA", "TAGLIO", "COLORE", "MECHES", "TRATTAMENTI", "UOMO", "ALTRO", "PRODOTTI"]
     }
 
-    Config.seedVersion = "parr-20261014-02";
+    Config.seedVersion = "parr-20261014-03";
 
     Config.seedBio = {
         reparti: ["","TUTTI","BIONAIF KIT","BIONAIF PLANTARI 1","BIONAIF PLANTARI 2","GOODLOOK","PEDISALUS","ZEN","VARIE"],

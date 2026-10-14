@@ -9,6 +9,8 @@ const DB = (() => {
     let syncState = {}
     let initialized = false
     let initPromise = null
+    let seedResetPending = false
+    let seedResetError = ""
 
     function cleanName(value) {
         return String(value || "sunmi")
@@ -96,15 +98,15 @@ const DB = (() => {
         if (!base) return
 
         remotes = {}
-        ["config", "receipt"].forEach(key => {
-            remotes[key] = new PouchDB(base + "/" + dbNames[key], { skip_setup: true })
+        Object.keys(dbs).forEach(key => {
+            remotes[key] = new PouchDB(base + "/" + dbNames[key], { skip_setup: key !== "magazzino" })
         })
     }
 
     async function primeFromRemote() {
         if (!remotes) return
 
-        await Promise.all(Object.keys(remotes).map(async key => {
+        await Promise.all(["config", "receipt"].map(async key => {
             const replication = dbs[key].replicate.from(remotes[key])
             let timer = null
 
@@ -127,7 +129,11 @@ const DB = (() => {
     function startLiveSync() {
         if (!remotes) return
 
-        Object.keys(remotes).forEach(key => {
+        ["config", "receipt"].forEach(key => {
+            if (key === "config" && seedResetPending) {
+                syncState.config = { status: "PAUSED", lastOk: "", error: seedResetError }
+                return
+            }
             syncState[key] = {
                 status: "STARTING",
                 lastOk: "",
@@ -175,6 +181,94 @@ const DB = (() => {
         })
     }
 
+    async function getOptionalDoc(store, id) {
+        try {
+            return await store.get(id)
+        } catch (error) {
+            if (error.status === 404) return null
+            throw error
+        }
+    }
+
+    async function verifySeedCatalog(store, docs) {
+        const rows = await store.allDocs({ include_docs: true })
+        const current = rows.rows
+            .map(row => row.doc)
+            .filter(doc => doc && !doc._id.startsWith("_design/"))
+        if (current.length !== docs.length)
+            throw new Error("Numero articoli non corrispondente: " + current.length + "/" + docs.length)
+
+        const byId = new Map(current.map(doc => [doc._id, doc]))
+        for (const expected of docs) {
+            const actual = byId.get(expected._id)
+            if (!actual || Object.keys(expected).some(key =>
+                JSON.stringify(actual[key]) !== JSON.stringify(expected[key])
+            )) {
+                throw new Error("Articolo non verificato: " + expected._id)
+            }
+        }
+    }
+
+    async function replaceSeedCatalog(store, docs) {
+        if (!docs.length) throw new Error("Seed senza articoli")
+        const rows = await store.allDocs({ include_docs: true })
+        const existing = rows.rows
+            .map(row => row.doc)
+            .filter(doc => doc && !doc._id.startsWith("_design/"))
+        const oldById = new Map(existing.map(doc => [doc._id, doc]))
+        const seedIds = new Set(docs.map(doc => doc._id))
+        const writes = existing
+            .filter(doc => !seedIds.has(doc._id))
+            .map(doc => ({ _id: doc._id, _rev: doc._rev, _deleted: true }))
+
+        docs.forEach(doc => {
+            const current = oldById.get(doc._id)
+            writes.push(current ? Object.assign({}, doc, { _rev: current._rev }) : doc)
+        })
+
+        const results = await store.bulkDocs(writes)
+        const failed = results.find(result => result.error || !result.ok)
+        if (failed) throw new Error("Reset listino fallito: " + (failed.reason || failed.message || failed.error))
+        await verifySeedCatalog(store, docs)
+    }
+
+    async function updateSeedConfig(store, reparti, seedVersion) {
+        const current = await getOptionalDoc(store, "config-pos")
+        if (current &&
+            current.seedVersion === seedVersion &&
+            JSON.stringify(current.reparti) === JSON.stringify(reparti)) return
+
+        const next = Object.assign({}, current || {}, {
+            _id: "config-pos",
+            tipo: "config",
+            reparti: reparti,
+            seedVersion: seedVersion
+        })
+        if (!Array.isArray(next.casse) || !next.casse.length)
+            next.casse = [{ id: 1, nome: "Cassa 1" }]
+
+        await store.put(next)
+        const checked = await store.get("config-pos")
+        if (checked.seedVersion !== seedVersion ||
+            JSON.stringify(checked.reparti) !== JSON.stringify(reparti))
+            throw new Error("Reparti non verificati")
+    }
+
+    async function writeSeedMarker(store, seedVersion) {
+        const current = await getOptionalDoc(store, "_local/seed-version")
+        if (current && current.seedVersion === seedVersion) return
+
+        const marker = {
+            _id: "_local/seed-version",
+            seedVersion: seedVersion
+        }
+        if (current && current._rev) marker._rev = current._rev
+        await store.put(marker)
+        const checked = await store.get("_local/seed-version")
+        if (checked.seedVersion !== seedVersion)
+            throw new Error("Versione seed non verificata")
+    }
+
     async function ensureSeed() {
         function buildSeedReparti() {
             const counts = {}
@@ -202,11 +296,11 @@ const DB = (() => {
         function buildSeedDocs() {
             if (!Array.isArray(Config.listino)) return []
 
-            return Config.listino.map(item => {
+            return Config.listino.map((item, index) => {
                 const isProduct = item.tipo === "P" || Number(item.reparto) === 8
 
                 return {
-                    _id: uuid(),
+                    _id: "seed-" + String(Config.seedVersion || "default") + "-" + String(index + 1).padStart(4, "0"),
                     tipo: isProduct ? "P" : "S",
                     nome: item.servizio || item.prodotto || "Articolo",
                     prezzo: parseNumber(item.prezzo),
@@ -224,83 +318,47 @@ const DB = (() => {
             })
         }
 
-        let configDoc = null
-
-        try {
-            configDoc = await dbs.config.get("config-pos")
-        } catch (e) {
-            if (e.status !== 404) throw e
-        }
-
         const seedVersion = String(Config.seedVersion || "")
-        let localSeedDoc = null
-        try {
-            localSeedDoc = await dbs.magazzino.get("_local/seed-version")
-        } catch (e) {
-            if (e.status !== 404) throw e
-        }
-
-        const forceSeed =
-            !!seedVersion &&
+        const seedDocs = buildSeedDocs()
+        const seedReparti = buildSeedReparti()
+        let configDoc = await getOptionalDoc(dbs.config, "config-pos")
+        const localSeedDoc = await getOptionalDoc(dbs.magazzino, "_local/seed-version")
+        const resetLocal = !!seedVersion &&
             String(localSeedDoc && localSeedDoc.seedVersion || "") !== seedVersion
 
-        if (forceSeed) {
-            const currentArticles = await dbs.magazzino.allDocs({ include_docs: true })
-            const deletions = currentArticles.rows
-                .map(row => row.doc)
-                .filter(doc => doc && !doc._id.startsWith("_design/"))
-                .map(doc => ({
-                    _id: doc._id,
-                    _rev: doc._rev,
-                    _deleted: true
-                }))
+        seedResetPending = false
+        seedResetError = ""
 
-            if (deletions.length) {
-                await dbs.magazzino.bulkDocs(deletions)
-            }
-
-            const docs = buildSeedDocs()
-            if (docs.length) {
-                await dbs.magazzino.bulkDocs(docs)
-            }
-
-            const nextConfig = Object.assign({}, configDoc || {}, {
-                _id: "config-pos",
-                tipo: "config",
-                reparti: buildSeedReparti(),
-                seedVersion: seedVersion
-            })
-
-            if (!Array.isArray(nextConfig.casse) || !nextConfig.casse.length) {
-                nextConfig.casse = [
-                    { id: 1, nome: "Cassa 1" }
-                ]
-            }
-
-            if (configDoc && configDoc._rev) nextConfig._rev = configDoc._rev
-
-            await dbs.config.put(nextConfig)
+        if (resetLocal) {
+            await replaceSeedCatalog(dbs.magazzino, seedDocs)
+            await updateSeedConfig(dbs.config, seedReparti, seedVersion)
             configDoc = await dbs.config.get("config-pos")
-
-            // Versione locale: ogni dispositivo ripristina il proprio listino una sola volta.
-            const nextSeedDoc = {
-                _id: "_local/seed-version",
-                seedVersion: seedVersion
-            }
-            if (localSeedDoc && localSeedDoc._rev) nextSeedDoc._rev = localSeedDoc._rev
-            await dbs.magazzino.put(nextSeedDoc)
         } else if (!configDoc) {
-            configDoc = {
-                _id: "config-pos",
-                tipo: "config",
-                reparti: buildSeedReparti(),
-                casse: [
-                    { id: 1, nome: "Cassa 1" }
-                ],
-                seedVersion: seedVersion
-            }
+            await updateSeedConfig(dbs.config, seedReparti, seedVersion)
+            configDoc = await dbs.config.get("config-pos")
+        }
 
-            await dbs.config.put(configDoc)
+        if (seedVersion) {
+            try {
+                if (!remotes || !remotes.magazzino || !remotes.config)
+                    throw new Error("Server remoto non configurato")
+
+                const remoteSeedDoc = await getOptionalDoc(remotes.magazzino, "_local/seed-version")
+                if (!remoteSeedDoc || remoteSeedDoc.seedVersion !== seedVersion) {
+                    await replaceSeedCatalog(remotes.magazzino, seedDocs)
+                    await updateSeedConfig(remotes.config, seedReparti, seedVersion)
+                    await writeSeedMarker(remotes.magazzino, seedVersion)
+                }
+
+                if (resetLocal) {
+                    await verifySeedCatalog(dbs.magazzino, seedDocs)
+                    await writeSeedMarker(dbs.magazzino, seedVersion)
+                }
+            } catch (error) {
+                seedResetPending = true
+                seedResetError = error && error.message ? error.message : String(error)
+                console.warn("Reset seed remoto in attesa", seedResetError)
+            }
         }
 
         let deviceDoc = null
@@ -615,7 +673,9 @@ const DB = (() => {
     }
 
     async function auditReplication(key) {
-        if (key === "magazzino") return { message: "DISATTIVATA" }
+        if (key === "magazzino") return { message: "DISATTIVATA - solo reset seed" }
+        if (key === "config" && seedResetPending)
+            return { warning: "Replica in attesa di reset remoto: " + seedResetError }
         if (!remotes || !remotes[key]) throw new Error("Replica remota non configurata: " + key)
 
         const state = syncState[key] || { status: "STARTING", lastOk: "", error: "" }
