@@ -96,7 +96,7 @@ const DB = (() => {
         if (!base) return
 
         remotes = {}
-        Object.keys(dbs).forEach(key => {
+        ["config", "receipt"].forEach(key => {
             remotes[key] = new PouchDB(base + "/" + dbNames[key], { skip_setup: true })
         })
     }
@@ -104,7 +104,7 @@ const DB = (() => {
     async function primeFromRemote() {
         if (!remotes) return
 
-        await Promise.all(Object.keys(dbs).map(async key => {
+        await Promise.all(Object.keys(remotes).map(async key => {
             const replication = dbs[key].replicate.from(remotes[key])
             let timer = null
 
@@ -127,7 +127,7 @@ const DB = (() => {
     function startLiveSync() {
         if (!remotes) return
 
-        Object.keys(dbs).forEach(key => {
+        Object.keys(remotes).forEach(key => {
             syncState[key] = {
                 status: "STARTING",
                 lastOk: "",
@@ -233,9 +233,16 @@ const DB = (() => {
         }
 
         const seedVersion = String(Config.seedVersion || "")
+        let localSeedDoc = null
+        try {
+            localSeedDoc = await dbs.magazzino.get("_local/seed-version")
+        } catch (e) {
+            if (e.status !== 404) throw e
+        }
+
         const forceSeed =
             !!seedVersion &&
-            String(configDoc && configDoc.seedVersion || "") !== seedVersion
+            String(localSeedDoc && localSeedDoc.seedVersion || "") !== seedVersion
 
         if (forceSeed) {
             const currentArticles = await dbs.magazzino.allDocs({ include_docs: true })
@@ -274,6 +281,14 @@ const DB = (() => {
 
             await dbs.config.put(nextConfig)
             configDoc = await dbs.config.get("config-pos")
+
+            // Versione locale: ogni dispositivo ripristina il proprio listino una sola volta.
+            const nextSeedDoc = {
+                _id: "_local/seed-version",
+                seedVersion: seedVersion
+            }
+            if (localSeedDoc && localSeedDoc._rev) nextSeedDoc._rev = localSeedDoc._rev
+            await dbs.magazzino.put(nextSeedDoc)
         } else if (!configDoc) {
             configDoc = {
                 _id: "config-pos",
@@ -600,6 +615,7 @@ const DB = (() => {
     }
 
     async function auditReplication(key) {
+        if (key === "magazzino") return { message: "DISATTIVATA" }
         if (!remotes || !remotes[key]) throw new Error("Replica remota non configurata: " + key)
 
         const state = syncState[key] || { status: "STARTING", lastOk: "", error: "" }

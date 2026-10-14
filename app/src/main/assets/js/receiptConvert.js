@@ -71,7 +71,7 @@ function renderReceiptIT(r) {
         });
     }
 
-    out.push({ newline: 5 });
+    out.push({ newline: 10 });
 
     return out;
 }

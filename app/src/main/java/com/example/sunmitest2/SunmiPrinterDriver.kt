@@ -108,6 +108,11 @@ class SunmiPrinterDriver(
                         cols.size == 3 &&
                         cols[2] == "PREZZO (€)"
 
+                    val isReceiptHeader80 =
+                        paperWidthMm > 58 &&
+                        cols.size == 3 &&
+                        cols[2] == "PREZZO (€)"
+
                     val isElectronicPayment58 =
                         paperWidthMm <= 58 &&
                         cols.size == 2 &&
@@ -125,7 +130,7 @@ class SunmiPrinterDriver(
                     when (cols.size) {
                         3 -> svc.printColumnsText(
                             cols,
-                            if (isReceiptHeader58) intArrayOf(19, 4, 9) else profile.widths3,
+                            if (isReceiptHeader58) intArrayOf(19, 4, 9) else if (isReceiptHeader80) intArrayOf(31, 5, 12) else profile.widths3,
                             ALIGN_3,
                             callback
                         )
