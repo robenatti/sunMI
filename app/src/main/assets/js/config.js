@@ -115,7 +115,7 @@ if (true) {
         reparti: ["", "PIEGA", "TAGLIO", "COLORE", "MECHES", "TRATTAMENTI", "UOMO", "ALTRO", "PRODOTTI"]
     }
 
-    Config.seedVersion = "bio-20260923-03";
+    Config.seedVersion = "parr-20261014-01";
 
     Config.seedBio = {
         reparti: ["","TUTTI","BIONAIF KIT","BIONAIF PLANTARI 1","BIONAIF PLANTARI 2","GOODLOOK","PEDISALUS","ZEN","VARIE"],
@@ -189,9 +189,8 @@ if (true) {
         ]
     }
 
-    // Setup provvisorio: sui database nuovi il seed attivo è BIO.
-    // Il seed DEMO resta disponibile in Config.seedDemo.
-    Config.listino = Config.seedBio.listino
-    Config.reparti = Config.seedBio.reparti;
+    // Seed attivo: DEMO PARRUCCHIERE. Cambio versione per forzare il ripristino del listino.
+    Config.listino = Config.seedDemo.listino
+    Config.reparti = Config.seedDemo.reparti;
 
 }
