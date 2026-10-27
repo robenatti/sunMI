@@ -67,8 +67,50 @@ const Fiscal = (() => {
         }
     }
 
+    async function annullaIT(dcw) {
+        const originale = String(dcw || "").trim()
+        if (!originale) throw new Error("Numero DCW mancante")
+
+        const paramS = "idc=" + encodeURIComponent(getIdc()) +
+            "&action=annulli&dcw=" + encodeURIComponent(originale)
+
+        const res = await fetch(urlIT + "?" + paramS)
+        if (!res.ok) throw new Error("HTTP " + res.status)
+
+        const json = await res.json()
+        const esito = json && json.return
+        if (!json || json.result !== "OK" || !esito || esito.done !== "OK") {
+            const errore = json && (json.error || (esito && esito.errorMessage))
+            throw new Error(errore ? String(errore) : "Annullo non confermato dal servizio fiscale")
+        }
+
+        if (esito.dcw && esito.dcw !== originale)
+            throw new Error("DCW della risposta diverso dal documento richiesto")
+
+        const fisc = esito.fiscAL || {}
+        const fileName = fisc.fileName || ""
+        const contentB64 = esito.contentB64 || ""
+
+        if (fileName && contentB64) {
+            try {
+                await Bridge.exec("pdf_save", { fileName, contentB64 }, 15000)
+            } catch (e) {
+                console.error("ERRORE SALVATAGGIO PDF ANNULLO", e)
+            }
+        }
+
+        return {
+            dcw: originale,
+            numero: fisc.documento_numero || "",
+            data: fisc.data || "",
+            ora: fisc.ora || "",
+            fileName: fileName
+        }
+    }
+
     return {
         prepareIT,
-        fiscalizeIT
+        fiscalizeIT,
+        annullaIT
     }
 })()

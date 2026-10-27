@@ -10,6 +10,7 @@ const POS = (() => {
     let recoveryTimer = null;
     let recoveryRunning = false;
     let fiscalLocks = new Map();
+    let cancelLocks = new Map();
     let connectionStatus = "STANDBY";
     let connectionAttempt = 0;
 
@@ -403,10 +404,47 @@ const POS = (() => {
     }
 
     async function cancelReceipt(id) {
-        let receipt = await DB.getReceipt(id)
-        receipt.annullata = true
-        receipt.annullataAt = new Date().toISOString()
-        return DB.saveReceipt(receipt)
+        if (cancelLocks.has(id)) return cancelLocks.get(id)
+
+        const work = (async () => {
+            // Attende un'eventuale fiscalizzazione già avviata sulla stessa ricevuta.
+            if (fiscalLocks.has(id)) await fiscalLocks.get(id)
+
+            let receipt = await DB.getReceipt(id)
+            if (receipt.annullata === true) return receipt
+
+            const dcw = String((receipt.fiscal && receipt.fiscal.numero) || receipt.rCode || "").trim()
+            if (receipt.fiscalStatus === "OK" || dcw) {
+                if (!dcw) throw new Error("DCW mancante: impossibile annullare il documento fiscale")
+
+                try {
+                    receipt.annullo = await Fiscal.annullaIT(dcw)
+                } catch (e) {
+                    throw new Error("Annullo fiscale non confermato per " + dcw +
+                        ". Verificare sul portale AdE prima di riprovare. " + errorMessage(e))
+                }
+            }
+
+            receipt.annullata = true
+            receipt.annullataAt = new Date().toISOString()
+
+            try {
+                return await DB.saveReceipt(receipt)
+            } catch (e) {
+                if (receipt.annullo) {
+                    throw new Error("Annullo AdE eseguito, ma salvataggio locale fallito. " +
+                        "Verificare prima di riprovare. " + errorMessage(e))
+                }
+                throw e
+            }
+        })()
+
+        cancelLocks.set(id, work)
+        try {
+            return await work
+        } finally {
+            cancelLocks.delete(id)
+        }
     }
 
     async function retryPendingFiscalization() {

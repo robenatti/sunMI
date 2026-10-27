@@ -69,30 +69,40 @@ AppViews.riepilogo = (() => {
             ? receipt.fiscal.fileName
             : ""
 
-        button.type = "button"
-        button.className = "pdf-button"
-        button.textContent = "PDF"
+        function setupPdfButton(element, name) {
+            element.type = "button"
+            element.className = "pdf-button"
 
-        if (!fileName) {
-            button.classList.add("pdf-missing")
-        } else {
-            Bridge.exec("pdf_exists", { fileName: fileName }, 3000)
-                .then(result => {
-                    if (!result || !result.exists) button.classList.add("pdf-missing")
-                })
-                .catch(() => button.classList.add("pdf-missing"))
+            if (!name) {
+                element.classList.add("pdf-missing")
+            } else {
+                Bridge.exec("pdf_exists", { fileName: name }, 3000)
+                    .then(result => {
+                        if (!result || !result.exists) element.classList.add("pdf-missing")
+                    })
+                    .catch(() => element.classList.add("pdf-missing"))
+            }
+
+            element.addEventListener("click", event => {
+                event.stopPropagation()
+                if (!name) return
+                Bridge.exec("pdf_open", { fileName: name }, 5000)
+                    .catch(() => element.classList.add("pdf-missing"))
+            })
         }
 
-        button.addEventListener("click", event => {
-            event.stopPropagation()
-
-            if (!fileName) return
-
-            Bridge.exec("pdf_open", { fileName: fileName }, 5000)
-                .catch(() => button.classList.add("pdf-missing"))
-        })
-
+        button.textContent = "PDF"
+        setupPdfButton(button, fileName)
         td.appendChild(button)
+
+        const annulloPdf = receipt.annullo && receipt.annullo.fileName
+        if (annulloPdf) {
+            const buttonAnnullo = document.createElement("button")
+            buttonAnnullo.textContent = "PDF A"
+            setupPdfButton(buttonAnnullo, annulloPdf)
+            td.appendChild(buttonAnnullo)
+        }
+
         tr.appendChild(td)
     }
 
@@ -132,12 +142,20 @@ AppViews.riepilogo = (() => {
         button.addEventListener("click", async event => {
             event.stopPropagation()
 
-            if (!confirm("Confermi annullamento ricevuta?")) return
+            const dcw = (receipt.fiscal && receipt.fiscal.numero) || receipt.rCode || ""
+            const fiscale = receipt.fiscalStatus === "OK" || !!dcw
+            const domanda = fiscale
+                ? "Confermi l'annullo fiscale del documento " + (dcw || "(DCW mancante)") + " su AdE?"
+                : "Confermi annullamento ricevuta?"
+
+            if (!confirm(domanda)) return
 
             button.disabled = true
 
             try {
                 await AppAPI.cancelReceipt(receipt._id)
+            } catch (e) {
+                alert("Annullamento non completato: " + (e && e.message ? e.message : String(e)))
             } finally {
                 await refresh()
             }
