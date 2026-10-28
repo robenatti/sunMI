@@ -104,7 +104,7 @@ const DB = (() => {
     async function primeFromRemote() {
         if (!remotes) return
 
-        await Promise.all(["config", "receipt"].map(async key => {
+        await Promise.all(["magazzino", "config", "receipt"].map(async key => {
             const replication = dbs[key].replicate.from(remotes[key])
             let timer = null
 
@@ -127,7 +127,7 @@ const DB = (() => {
     function startLiveSync() {
         if (!remotes) return
 
-        ["config", "receipt"].forEach(key => {
+        ["magazzino", "config", "receipt"].forEach(key => {
             syncState[key] = {
                 status: "STARTING",
                 lastOk: "",
@@ -500,7 +500,6 @@ const DB = (() => {
     }
 
     async function auditReplication(key) {
-        if (key === "magazzino") return { message: "DISATTIVATA - magazzino non replicato" }
         if (!remotes || !remotes[key]) throw new Error("Replica remota non configurata: " + key)
 
         const state = syncState[key] || { status: "STARTING", lastOk: "", error: "" }
