@@ -22,6 +22,7 @@ const Reports = (() => {
             pos: 0,
             servizi: 0,
             prodotti: 0,
+            sconti: 0,
             documenti: activeReceipts.length,
             receipts: receipts
         }
@@ -31,12 +32,13 @@ const Reports = (() => {
             result.totale += totale
             result.servizi += Number(r.totServizi || 0)
             result.prodotti += Number(r.totProdotti || 0)
+            result.sconti += Number(r.totSconto || 0)
 
             if (r.mp === "CC") result.pos += totale
             else result.contanti += totale
         })
 
-        ;["totale", "contanti", "pos", "servizi", "prodotti"].forEach(key => {
+        ;["totale", "contanti", "pos", "servizi", "prodotti", "sconti"].forEach(key => {
             result[key] = Math.round(result[key] * 100) / 100
         })
 

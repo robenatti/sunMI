@@ -174,6 +174,7 @@ AppViews.riepilogo = (() => {
         document.getElementById("sumPos").textContent = money(data.pos)
         document.getElementById("sumServices").textContent = money(data.servizi)
         document.getElementById("sumProducts").textContent = money(data.prodotti)
+        document.getElementById("sumDiscounts").textContent = data.sconti ? "-" + money(data.sconti) : money(0)
         document.getElementById("sumDocuments").textContent = String(data.documenti)
 
         const body = document.getElementById("receiptRows")
@@ -215,6 +216,7 @@ AppViews.riepilogo = (() => {
             "sumPos",
             "sumServices",
             "sumProducts",
+            "sumDiscounts",
             "sumDocuments",
             "receiptRows",
             "receiptDetail"
