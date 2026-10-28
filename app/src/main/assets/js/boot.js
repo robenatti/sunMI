@@ -48,6 +48,9 @@ var BootTerminal = (function () {
         var actions = el("bootActions")
         if (actions) actions.classList.remove("show")
 
+        var association = el("associationDialog")
+        if (association) association.hidden = true
+
         var detail = el("bootTechnical")
         if (detail) {
             detail.classList.remove("show")
@@ -58,6 +61,15 @@ var BootTerminal = (function () {
     function show() {
         var screen = el("bootScreen")
         if (screen) screen.classList.remove("hidden")
+    }
+
+    function showAssociation(deviceId) {
+        var dialog = el("associationDialog")
+        var code = el("associationDeviceId")
+        if (code) code.textContent = safeText(deviceId)
+        if (dialog) dialog.hidden = false
+        var retry = el("associationRetry")
+        if (retry) retry.focus()
     }
 
     function hide() {
@@ -170,6 +182,11 @@ var BootTerminal = (function () {
     })
 
     document.addEventListener("click", function (event) {
+        if (event.target && event.target.id === "associationRetry") {
+            window.location.reload()
+            return
+        }
+
         if (event.target && event.target.id === "bootDetails") {
             var detail = el("bootTechnical")
             if (!detail) return
@@ -187,6 +204,7 @@ var BootTerminal = (function () {
     return {
         reset: reset,
         show: show,
+        showAssociation: showAssociation,
         hide: hide,
         info: info,
         ok: ok,

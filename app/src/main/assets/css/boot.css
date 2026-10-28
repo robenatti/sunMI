@@ -140,3 +140,57 @@ body {
         opacity: 0;
     }
 }
+
+.association-dialog[hidden] {
+    display: none;
+}
+
+.association-dialog {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    padding: 1rem;
+    background: rgba(0, 0, 0, 0.88);
+}
+
+.association-panel {
+    width: 100%;
+    max-width: 30rem;
+    max-height: 100%;
+    overflow-y: auto;
+    box-sizing: border-box;
+    padding: 1.5rem;
+    border: 2px solid #56ff72;
+    background: #020b04;
+    color: #e4ffe8;
+    text-align: center;
+}
+
+.association-panel h2 {
+    margin: 0 0 1rem;
+    color: #56ff72;
+    font-size: 1.35rem;
+}
+
+.association-panel p {
+    line-height: 1.4;
+}
+
+.association-device-id {
+    margin: 1.1rem 0;
+    padding: 0.9rem 0.5rem;
+    border: 1px solid #56ff72;
+    color: #56ff72;
+    font-size: 1.05rem;
+    font-weight: 700;
+    overflow-wrap: anywhere;
+    user-select: text;
+}
+
+.association-panel .boot-button {
+    margin-top: 0.5rem;
+}

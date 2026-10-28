@@ -25,6 +25,17 @@
             <pre id="bootTechnical" class="boot-technical"></pre>
             <div class="boot-cursor">_</div>
         </div>
+        <div id="associationDialog" class="association-dialog" role="dialog"
+             aria-modal="true" aria-labelledby="associationTitle" hidden>
+            <div class="association-panel">
+                <h2 id="associationTitle">ASSOCIAZIONE CASSA</h2>
+                <p>Questo dispositivo non è ancora associato a un account.</p>
+                <p>Abbina la cassa sul server usando questo Device ID:</p>
+                <div id="associationDeviceId" class="association-device-id"></div>
+                <p>Dopo l'associazione, premi OK per ricominciare.</p>
+                <button id="associationRetry" class="boot-button" type="button">OK</button>
+            </div>
+        </div>
     </div>
 
     <div id="appView" style="display:none"></div>

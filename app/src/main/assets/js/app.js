@@ -431,6 +431,10 @@ window.SystemAudit = (() => {
             accountResult = await Account.init();
             const state = Account.getState();
 
+            if (accountResult.needsAssociation) {
+                return { warning: "dispositivo da associare al server" };
+            }
+
             if (accountResult.warning) {
                 return {
                     warning:
@@ -451,6 +455,12 @@ window.SystemAudit = (() => {
             BootTerminal.ready("CONFIGURAZIONE ACCOUNT AGGIORNATA - RIAVVIO");
             running = false;
             window.location.reload();
+            return;
+        }
+
+        if (accountResult && accountResult.needsAssociation) {
+            BootTerminal.showAssociation(Account.getState().deviceId);
+            running = false;
             return;
         }
 

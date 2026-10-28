@@ -208,6 +208,17 @@ const Account = (() => {
             "&localTimestamp=" + localTimestamp()
     }
 
+    function unassociatedError(message) {
+        const error = new Error(message || "Dispositivo non associato a un account")
+        error.code = "DEVICE_NOT_ASSOCIATED"
+        return error
+    }
+
+    function isUnassociatedMessage(message) {
+        return /non +(trovato|trovata|associato|associata|registrato|registrata|configurato|configurata)|inesistent|sconosciut|not +(found|associated|registered)|unknown|unregistered/i
+            .test(String(message || ""))
+    }
+
     async function fetchRemote() {
         if (!Config.accountServerUrl) throw new Error("Server account non configurato")
 
@@ -218,7 +229,10 @@ const Account = (() => {
                 Number(Config.accountTimeoutMs || 3500)
             )
 
-            if (!res.ok) throw new Error("HTTP " + res.status)
+            if (!res.ok) {
+                if (res.status === 404) throw unassociatedError()
+                throw new Error("HTTP " + res.status)
+            }
 
             const json = await res.json()
             const account = json.account ||
@@ -226,15 +240,22 @@ const Account = (() => {
                 (json.result === "OK" && json.return && json.return._id ? json.return : null) ||
                 (json._id ? json : null)
 
-            if (!account)
-                throw new Error(json && (json.error || json.return) ? String(json.error || json.return) : "Account dispositivo non trovato")
+            if (!account) {
+                const message = typeof json.error === "string" ? json.error :
+                    typeof json.return === "string" ? json.return :
+                    typeof json.message === "string" ? json.message : ""
+
+                // Gli errori generici del server non devono sembrare nuove casse.
+                if (message && !isUnassociatedMessage(message)) throw new Error(message)
+                throw unassociatedError(message)
+            }
 
             const device = json.device ||
                 (json.return && json.return.device) ||
                 findDevice(account, deviceId)
 
             if (!device)
-                throw new Error("Dispositivo non associato all'account")
+                throw unassociatedError()
 
             serverOnline = true
             serverError = ""
@@ -269,6 +290,10 @@ const Account = (() => {
             apply(remote.account, remote.device)
             return { changed: false, source: "remote" }
         } catch (e) {
+            if (e && e.code === "DEVICE_NOT_ASSOCIATED") {
+                return { changed: false, source: "unassociated", needsAssociation: true }
+            }
+
             if (local && local.account) {
                 apply(local.account, local.device)
                 return { changed: false, source: "local", warning: serverError }
