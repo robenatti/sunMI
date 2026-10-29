@@ -306,24 +306,88 @@ AppViews.config = (() => {
         document.getElementById("nexiRegisterId").value = String(cfg.registerId || "00000000");
     }
 
-    async function saveNexiConfig() {
-        const pos17 = {
-            host: document.getElementById("nexiHost").value.trim(),
-            port: Number(document.getElementById("nexiPort").value),
-            terminalId: document.getElementById("nexiTerminalId").value.trim(),
-            registerId: document.getElementById("nexiRegisterId").value.trim() || "00000000"
+    function readNexiForm() {
+        return {
+            host: document.getElementById("nexiHost").value,
+            port: document.getElementById("nexiPort").value,
+            terminalId: document.getElementById("nexiTerminalId").value,
+            registerId: document.getElementById("nexiRegisterId").value
         };
-        if (!pos17.host || !Number.isInteger(pos17.port) || pos17.port < 1 || pos17.port > 65535 ||
-            !/^[0-9]{1,8}$/.test(pos17.terminalId) || !/^[0-9]{1,8}$/.test(pos17.registerId)) {
-            alert("Inserire IP, porta (1-65535), Terminal ID e Register ID numerici (max 8 cifre)");
-            return;
+    }
+
+    function validatedNexiForm() {
+        try {
+            return AppAPI.validatePos17Config(readNexiForm());
+        } catch (error) {
+            const fields = {
+                host: "nexiHost",
+                port: "nexiPort",
+                terminalId: "nexiTerminalId",
+                registerId: "nexiRegisterId"
+            };
+            const element = document.getElementById(fields[error.field] || "nexiHost");
+            if (element) element.focus();
+            document.getElementById("nexiTestStatus").textContent = error.message;
+            alert(error.message);
+            return null;
         }
+    }
+
+    async function saveNexiConfig() {
+        // La validazione e' effettuata sui campi PRIMA della scrittura nel database.
+        const pos17 = validatedNexiForm();
+        if (!pos17) return;
+
         try {
             configData = await AppAPI.saveDeviceConfig({ pos17 });
             renderNexiConfig();
+            document.getElementById("nexiTestStatus").textContent = "Configurazione POS Nexi salvata.";
             alert("Configurazione Nexi salvata");
         } catch (error) {
             alert("Errore salvataggio Nexi: " + (error.message || String(error)));
+        }
+    }
+
+    async function tryNexiConfig() {
+        const cfg = validatedNexiForm();
+        if (!cfg) return;
+
+        const cents = 10 + Math.floor(Math.random() * 41);
+        const amount = cents / 100;
+        const amountLabel = money(amount) + " €";
+        if (!confirm(
+            "Eseguire un pagamento REALE di " + amountLabel +
+            " sul terminale Nexi?\\n" +
+            "Non verra' creato alcun documento fiscale e non verra' effettuato alcuno storno automatico."
+        )) return;
+
+        const button = document.getElementById("testNexiConfig");
+        const save = document.getElementById("saveNexiConfig");
+        const status = document.getElementById("nexiTestStatus");
+        button.disabled = true;
+        save.disabled = true;
+        status.textContent = "Pagamento reale di " + amountLabel + " in corso: attendere l'esito sul POS...";
+
+        try {
+            const result = await AppAPI.testNexiPayment(cfg, amount);
+            let message;
+            if (result.status === "OK") {
+                message = "PROVA RIUSCITA - Pagamento di " + amountLabel + " approvato.";
+            } else if (result.status === "KO") {
+                message = "PROVA RIFIUTATA - " + (result.message || "Pagamento non approvato.");
+            } else {
+                message = "ESITO NON CONFERMATO - " + (result.message || "Comunicazione POS interrotta.") +
+                    " Verificare il terminale prima di ripetere la prova.";
+            }
+            status.textContent = message;
+            alert(message);
+        } catch (error) {
+            const message = "ERRORE PROVA NEXI: " + (error.message || String(error));
+            status.textContent = message;
+            alert(message);
+        } finally {
+            button.disabled = false;
+            save.disabled = false;
         }
     }
 
@@ -369,7 +433,8 @@ AppViews.config = (() => {
             "accountCash",
             "accountPaperWidthMm",
             "saveAccountConfig",
-            "nexiHost", "nexiPort", "nexiTerminalId", "nexiRegisterId", "saveNexiConfig"
+            "nexiHost", "nexiPort", "nexiTerminalId", "nexiRegisterId", "saveNexiConfig",
+            "testNexiConfig", "nexiTestStatus"
         ]
 
         const missing = ids.filter(id => !root.querySelector("#" + id))
@@ -398,6 +463,7 @@ AppViews.config = (() => {
         document.getElementById("saveReceiptNotes").addEventListener("click", saveReceiptNotes)
         document.getElementById("saveAccountConfig").addEventListener("click", saveAccountConfig)
         document.getElementById("saveNexiConfig").addEventListener("click", saveNexiConfig)
+        document.getElementById("testNexiConfig").addEventListener("click", tryNexiConfig)
     }
 
     function unmount() {}

@@ -121,6 +121,14 @@ const AppAPI = (() => {
         return POS.pay(tipo);
     }
 
+    function validatePos17Config(config) {
+        return POS.validatePos17Config(config);
+    }
+
+    function testNexiPayment(config, amount) {
+        return POS.testNexiPayment(config, amount);
+    }
+
     async function saveArticle(article) {
         return Catalog.saveArticle(article);
     }
@@ -202,6 +210,8 @@ const AppAPI = (() => {
         addDiscount,
         resetPos,
         pay,
+        validatePos17Config,
+        testNexiPayment,
         saveArticle,
         saveReparti,
         getConfig,

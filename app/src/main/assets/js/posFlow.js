@@ -7,6 +7,7 @@ const POS = (() => {
     let listeners = new Map();
     let prepared = false;
     let paymentRunning = false;
+    let nexiTestRunning = false;
     let recoveryTimer = null;
     let recoveryRunning = false;
     let fiscalLocks = new Map();
@@ -477,25 +478,50 @@ const POS = (() => {
         }, 60000)
     }
 
+    function validatePos17Config(input) {
+        const data = input || {};
+        const host = String(data.host == null ? "" : data.host).trim();
+        const portText = String(data.port == null ? "" : data.port).trim();
+        const terminalId = String(data.terminalId == null ? "" : data.terminalId).trim();
+        const registerId = String(data.registerId == null ? "" : data.registerId).trim();
+
+        function invalid(field, message) {
+            const error = new Error(message);
+            error.field = field;
+            throw error;
+        }
+
+        const octets = host.split(".");
+        if (octets.length !== 4 || !octets.every(value =>
+            /^(0|[1-9][0-9]{0,2})$/.test(value) && Number(value) <= 255))
+            invalid("host", "IP terminale non valido: inserire un indirizzo IPv4, ad esempio 192.168.1.100.");
+
+        const port = Number(portText);
+        if (!/^[0-9]+$/.test(portText) || !Number.isInteger(port) || port < 1 || port > 65535)
+            invalid("port", "Porta TCP non valida: inserire un numero da 1 a 65535.");
+
+        if (!/^[0-9]{1,8}$/.test(terminalId))
+            invalid("terminalId", "Terminal ID non valido: inserire da 1 a 8 cifre.");
+
+        if (!/^[0-9]{1,8}$/.test(registerId))
+            invalid("registerId", "Register ID non valido: inserire da 1 a 8 cifre.");
+
+        // Si passa al modulo Nexi solo una configurazione TCP, senza file INI legacy.
+        return { host, port, terminalId, registerId };
+    }
+
     function getPos17Config(device) {
         const remote = Account.getState().device || {};
-        const legacy = Config.terminalePOS && Config.terminalePOS.CC || {};
-        const cfg = Object.assign({}, legacy, remote.pos17 || {}, device.pos17 || {});
-        cfg.host = String(cfg.host || "").trim();
-        cfg.port = Number(cfg.port);
-        cfg.terminalId = String(cfg.terminalId || "").trim();
-        cfg.registerId = String(cfg.registerId || "00000000").trim();
-        if (!cfg.host || !Number.isInteger(cfg.port) || cfg.port < 1 || cfg.port > 65535 ||
-            !/^[0-9]{1,8}$/.test(cfg.terminalId) || !/^[0-9]{1,8}$/.test(cfg.registerId))
-            throw new Error("Nexi Protocollo 17 non configurato: impostare IP, porta e ID nel pannello POS Nexi");
-        return cfg;
+        const pos17 = Object.assign({}, remote.pos17 || {}, device && device.pos17 || {});
+        if (!pos17.registerId) pos17.registerId = "00000000";
+        return validatePos17Config(pos17);
     }
 
     function executeNexiPayment(cfg, amount) {
         return new Promise(resolve => {
             try {
                 if (!TerminalePOS.setupPOS(cfg)) {
-                    resolve({ status: "UNKNOWN", message: "Configurazione POS non valida" });
+                    resolve({ status: "UNKNOWN", message: "Impossibile inizializzare la connessione Nexi." });
                     return;
                 }
                 TerminalePOS.payPOS(null, amount, (ok, data) => {
@@ -513,22 +539,42 @@ const POS = (() => {
         });
     }
 
+    async function testNexiPayment(config, amount) {
+        const cfg = validatePos17Config(config);
+        const cents = Math.round(Number(amount) * 100);
+        if (!Number.isFinite(Number(amount)) || cents < 10 || cents > 50 ||
+            Math.abs(Number(amount) * 100 - cents) > 0.00001)
+            throw new Error("L'importo di prova deve essere compreso fra 0,10 e 0,50 euro.");
+
+        if (paymentRunning || nexiTestRunning)
+            throw new Error("Un pagamento POS è già in corso.");
+
+        nexiTestRunning = true;
+        try {
+            // Addebito vero, indipendente dalla cassa: non salva e non fiscalizza ricevute.
+            return await executeNexiPayment(cfg, cents / 100);
+        } finally {
+            nexiTestRunning = false;
+        }
+    }
+
     async function pay(tipo) {
         if (!items.length) {
             emit("payment:empty", {});
             return null;
         }
-        if (paymentRunning) return null;
+        if (paymentRunning || nexiTestRunning) return null;
 
         paymentRunning = true;
         emit("change", getState());
         emit("payment:start", { tipo: tipo, total: total });
 
         try {
+            // Validazione prima di creare o salvare qualunque documento di vendita.
+            const cfg = tipo === "CC" ? getPos17Config(await DB.getDeviceConfig()) : null;
             let receipt = await buildReceipt(tipo);
 
             if (tipo === "CC") {
-                const cfg = getPos17Config(await DB.getDeviceConfig());
                 receipt.documento = "Tentativo POS";
                 receipt.fiscalStatus = "WAIT_POS";
                 receipt.posStatus = "PENDING";
@@ -547,7 +593,9 @@ const POS = (() => {
                     emit(payment.status === "KO" ? "terminal:declined" : "terminal:unknown", {
                         message: payment.message || "Pagamento POS non riuscito"
                     });
-                    reset();
+                    // KO o esito incerto: conservare articoli, sconti, quantita' e totale.
+                    paymentRunning = false;
+                    emit("change", getState());
                     return null;
                 }
 
@@ -609,6 +657,8 @@ const POS = (() => {
         addDiscount: addDiscount,
         reset: reset,
         pay: pay,
+        validatePos17Config: validatePos17Config,
+        testNexiPayment: testNexiPayment,
         retryReceipt: retryReceipt,
         retryFiscalAndPrint: retryFiscalAndPrint,
         printAnyway: printAnyway,

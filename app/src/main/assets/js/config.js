@@ -29,10 +29,6 @@ if (true) {
         registerId: "00000000"
     }
 
-    Config.terminalePOS["CC"] = {
-        file: "c:\\programma\\aa-pos\\pos.ini"
-    }
-
     Config.progressMaxMs = 10000;
     Config.printTimeoutMs = 60000;
     //Config.stampaSoloPreventivi=true;
