@@ -459,6 +459,17 @@ AppViews.cassa = (() => {
         unsubscribers.push(AppAPI.on("pos:payment:empty", () => alert("Nessun articolo inserito")));
         unsubscribers.push(AppAPI.on("barcode:notfound", detail => alert("Barcode non trovato: " + detail.code)));
         unsubscribers.push(AppAPI.on("pos:payment:start", () => showProgress("Preparazione scontrino...", 10)));
+        unsubscribers.push(AppAPI.on("pos:terminal:connecting", () => showProgress("Connessione a Nexi...", 10)));
+        unsubscribers.push(AppAPI.on("pos:terminal:waiting", () => showProgress("In attesa del pagamento sul POS...", 20)));
+        unsubscribers.push(AppAPI.on("pos:terminal:declined", detail => {
+            document.getElementById("progressPopup").classList.remove("show", "error");
+            alert(detail.message || "Pagamento POS rifiutato");
+        }));
+        unsubscribers.push(AppAPI.on("pos:terminal:unknown", detail => {
+            document.getElementById("progressPopup").classList.remove("show", "error");
+            alert((detail.message || "Esito POS incerto") +
+                ". Verificare la transazione sul POS prima di ripetere il pagamento. Nessuna fiscalizzazione inviata.");
+        }));
         unsubscribers.push(AppAPI.on("pos:fiscal:start", () => showProgress("Collegamento al cassetto fiscale...", 30)));
         unsubscribers.push(AppAPI.on("pos:fiscal:end", detail => {
             if (detail && detail.error) {
@@ -481,7 +492,10 @@ AppViews.cassa = (() => {
             if (!detail.printError)
                 setTimeout(() => document.getElementById("progressPopup").classList.remove("show", "error"), 500);
         }));
-        unsubscribers.push(AppAPI.on("pos:error", detail => showProgress(detail.message || "Errore", 100, true)));
+        unsubscribers.push(AppAPI.on("pos:error", detail => {
+            showProgress(detail.message || "Errore", 100, true);
+            setTimeout(() => document.getElementById("progressPopup").classList.remove("show", "error"), 3500);
+        }));
     }
 
     function unmount() {

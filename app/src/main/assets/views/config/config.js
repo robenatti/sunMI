@@ -296,6 +296,37 @@ AppViews.config = (() => {
     }
 
 
+    function renderNexiConfig() {
+        const remote = AppAPI.getAccountState().device || {};
+        const local = configData.device || {};
+        const cfg = Object.assign({}, remote.pos17 || {}, local.pos17 || {});
+        document.getElementById("nexiHost").value = String(cfg.host || "");
+        document.getElementById("nexiPort").value = String(cfg.port || "");
+        document.getElementById("nexiTerminalId").value = String(cfg.terminalId || "");
+        document.getElementById("nexiRegisterId").value = String(cfg.registerId || "00000000");
+    }
+
+    async function saveNexiConfig() {
+        const pos17 = {
+            host: document.getElementById("nexiHost").value.trim(),
+            port: Number(document.getElementById("nexiPort").value),
+            terminalId: document.getElementById("nexiTerminalId").value.trim(),
+            registerId: document.getElementById("nexiRegisterId").value.trim() || "00000000"
+        };
+        if (!pos17.host || !Number.isInteger(pos17.port) || pos17.port < 1 || pos17.port > 65535 ||
+            !/^[0-9]{1,8}$/.test(pos17.terminalId) || !/^[0-9]{1,8}$/.test(pos17.registerId)) {
+            alert("Inserire IP, porta (1-65535), Terminal ID e Register ID numerici (max 8 cifre)");
+            return;
+        }
+        try {
+            configData = await AppAPI.saveDeviceConfig({ pos17 });
+            renderNexiConfig();
+            alert("Configurazione Nexi salvata");
+        } catch (error) {
+            alert("Errore salvataggio Nexi: " + (error.message || String(error)));
+        }
+    }
+
     function bindTabs() {
         document.querySelectorAll(".config-tab").forEach(button => {
             button.addEventListener("click", () => {
@@ -337,7 +368,8 @@ AppViews.config = (() => {
             "accountPwd",
             "accountCash",
             "accountPaperWidthMm",
-            "saveAccountConfig"
+            "saveAccountConfig",
+            "nexiHost", "nexiPort", "nexiTerminalId", "nexiRegisterId", "saveNexiConfig"
         ]
 
         const missing = ids.filter(id => !root.querySelector("#" + id))
@@ -354,6 +386,7 @@ AppViews.config = (() => {
         renderDepartments()
         renderReceiptNotes()
         renderAccount()
+        renderNexiConfig()
         newArticle()
 
         document.getElementById("backToPos").addEventListener("click", () => Router.open("cassa"))
@@ -364,6 +397,7 @@ AppViews.config = (() => {
         document.getElementById("saveDepartments").addEventListener("click", saveDepartments)
         document.getElementById("saveReceiptNotes").addEventListener("click", saveReceiptNotes)
         document.getElementById("saveAccountConfig").addEventListener("click", saveAccountConfig)
+        document.getElementById("saveNexiConfig").addEventListener("click", saveNexiConfig)
     }
 
     function unmount() {}

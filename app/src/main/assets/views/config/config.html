@@ -10,6 +10,7 @@
         <button class="btn config-tab" data-panel="departmentsPanel">REPARTI</button>
         <button class="btn config-tab" data-panel="receiptNotesPanel">NOTE SCONTRINO</button>
         <button class="btn config-tab" data-panel="passwordPanel">PASSWORD</button>
+        <button class="btn config-tab" data-panel="nexiPanel">POS NEXI</button>
         <button class="btn" id="runAudit">DIAGNOSTICA</button>
     </nav>
 
@@ -119,6 +120,20 @@
             </div>
 
             <button class="btn save-button config-save-fixed" id="saveAccountConfig" type="button">SALVA</button>
+        </div>
+    </section>
+    <section id="nexiPanel" class="config-panel">
+        <div class="password-editor">
+            <div class="password-zone-title">TERMINALE NEXI - PROTOCOLLO 17 TCP</div>
+            <div class="password-device-row">
+                <label>IP TERMINALE<input id="nexiHost" placeholder="192.168.1.100"></label>
+                <label>PORTA TCP<input id="nexiPort" type="number" min="1" max="65535"></label>
+            </div>
+            <div class="password-device-row">
+                <label>TERMINAL ID<input id="nexiTerminalId" maxlength="8" inputmode="numeric"></label>
+                <label>REGISTER ID<input id="nexiRegisterId" maxlength="8" inputmode="numeric"></label>
+            </div>
+            <button class="btn save-button config-save-fixed" id="saveNexiConfig" type="button">SALVA</button>
         </div>
     </section>
 </div>

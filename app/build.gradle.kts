@@ -4,15 +4,15 @@ plugins {
 }
 
 android {
-    namespace = "com.example.sunmitest2"
+    namespace = "it.altracassa.app"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.example.sunmitest2"
+        applicationId = "it.altracassa.app"
         minSdk = 23
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 23
+        versionName = "2.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

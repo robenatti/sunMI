@@ -19,6 +19,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "SunmiTest2"
+rootProject.name = "AltraCassa"
 include(":app")
  
