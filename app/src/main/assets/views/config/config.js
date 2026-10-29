@@ -3,6 +3,7 @@ window.AppViews = window.AppViews || {}
 AppViews.config = (() => {
     let currentArticle = null
     let configData = null
+    let nexiBusy = false
 
     function money(value) {
         return Number(value || 0).toLocaleString("it-IT", {
@@ -304,6 +305,9 @@ AppViews.config = (() => {
         document.getElementById("nexiPort").value = String(cfg.port || "");
         document.getElementById("nexiTerminalId").value = String(cfg.terminalId || "");
         document.getElementById("nexiRegisterId").value = String(cfg.registerId || "00000000");
+        const savedReceiptFlag = Object.prototype.hasOwnProperty.call(local, "posReceipt")
+            ? local.posReceipt : remote.posReceipt;
+        document.getElementById("nexiReceiptEnabled").checked = savedReceiptFlag === true;
     }
 
     function readNexiForm() {
@@ -313,6 +317,15 @@ AppViews.config = (() => {
             terminalId: document.getElementById("nexiTerminalId").value,
             registerId: document.getElementById("nexiRegisterId").value
         };
+    }
+
+    function appendNexiLog(message) {
+        const log = document.getElementById("nexiLog");
+        const time = new Date().toLocaleTimeString("it-IT", { hour12: false });
+        const lines = (log.textContent || "").split("\n").filter(Boolean);
+        String(message || "").split("\n").forEach(line => lines.push("[" + time + "] " + line));
+        log.textContent = lines.slice(-100).join("\n");
+        log.scrollTop = log.scrollHeight;
     }
 
     function validatedNexiForm() {
@@ -327,67 +340,104 @@ AppViews.config = (() => {
             };
             const element = document.getElementById(fields[error.field] || "nexiHost");
             if (element) element.focus();
-            document.getElementById("nexiTestStatus").textContent = error.message;
-            alert(error.message);
+            appendNexiLog("CONFIGURAZIONE ERRATA - " + (error.message || String(error)));
             return null;
         }
     }
 
+    function setNexiBusy(busy) {
+        nexiBusy = busy;
+        ["testNexiConfig", "nexiLastTransaction", "nexiTotals", "saveNexiConfig"].forEach(id => {
+            document.getElementById(id).disabled = busy;
+        });
+    }
+
+    function logNexiFields(data) {
+        if (!data || typeof data !== "object") return;
+        const fields = [
+            ["Esito", "result"],
+            ["Terminal ID", "terminalId"],
+            ["Importo", "amount"],
+            ["Carta", "pan"],
+            ["Autorizzazione", "authCode"],
+            ["STAN", "stan"],
+            ["ID online", "idOnline"],
+            ["RRN", "rrn"],
+            ["Data host", "hostDate"],
+            ["Ora host", "hostTime"],
+            ["Totale EFT", "eftTotal"],
+            ["Descrizione errore", "errorDescription"]
+        ];
+        fields.forEach(([label, key]) => {
+            const val = data[key];
+            if (val === null || typeof val === "undefined" || val === "") return;
+            const display = key === "eftTotal" ? money(val) + " €" : String(val);
+            appendNexiLog(label + ": " + display);
+        });
+    }
+
     async function saveNexiConfig() {
-        // La validazione e' effettuata sui campi PRIMA della scrittura nel database.
+        if (nexiBusy) return;
         const pos17 = validatedNexiForm();
         if (!pos17) return;
-
         try {
-            configData = await AppAPI.saveDeviceConfig({ pos17 });
+            configData = await AppAPI.saveDeviceConfig({
+                pos17,
+                posReceipt: document.getElementById("nexiReceiptEnabled").checked
+            });
             renderNexiConfig();
-            document.getElementById("nexiTestStatus").textContent = "Configurazione POS Nexi salvata.";
-            alert("Configurazione Nexi salvata");
+            appendNexiLog("Configurazione Nexi salvata. Ricevuta POS: " +
+                (configData.device.posReceipt === true ? "SI" : "NO"));
         } catch (error) {
-            alert("Errore salvataggio Nexi: " + (error.message || String(error)));
+            appendNexiLog("ERRORE SALVATAGGIO - " + (error.message || String(error)));
         }
     }
 
     async function tryNexiConfig() {
+        if (nexiBusy) return;
         const cfg = validatedNexiForm();
         if (!cfg) return;
 
         const cents = 10 + Math.floor(Math.random() * 41);
         const amount = cents / 100;
         const amountLabel = money(amount) + " €";
-        if (!confirm(
-            "Eseguire un pagamento REALE di " + amountLabel +
-            " sul terminale Nexi?\\n" +
-            "Non verra' creato alcun documento fiscale e non verra' effettuato alcuno storno automatico."
-        )) return;
-
-        const button = document.getElementById("testNexiConfig");
-        const save = document.getElementById("saveNexiConfig");
-        const status = document.getElementById("nexiTestStatus");
-        button.disabled = true;
-        save.disabled = true;
-        status.textContent = "Pagamento reale di " + amountLabel + " in corso: attendere l'esito sul POS...";
-
+        setNexiBusy(true);
+        appendNexiLog("PROVA - ADDEBITO REALE " + amountLabel + " - invio al terminale...");
         try {
             const result = await AppAPI.testNexiPayment(cfg, amount);
-            let message;
-            if (result.status === "OK") {
-                message = "PROVA RIUSCITA - Pagamento di " + amountLabel + " approvato.";
-            } else if (result.status === "KO") {
-                message = "PROVA RIFIUTATA - " + (result.message || "Pagamento non approvato.");
-            } else {
-                message = "ESITO NON CONFERMATO - " + (result.message || "Comunicazione POS interrotta.") +
-                    " Verificare il terminale prima di ripetere la prova.";
-            }
-            status.textContent = message;
-            alert(message);
+            if (result.status === "OK")
+                appendNexiLog("PROVA APPROVATA - " + amountLabel);
+            else if (result.status === "KO")
+                appendNexiLog("PROVA RIFIUTATA - " + (result.message || "Pagamento non approvato."));
+            else
+                appendNexiLog("ESITO INCERTO - " + (result.message || "Risposta non confermata.") +
+                    " Verificare il POS prima di ripetere la prova.");
+            logNexiFields(result.data);
         } catch (error) {
-            const message = "ERRORE PROVA NEXI: " + (error.message || String(error));
-            status.textContent = message;
-            alert(message);
+            appendNexiLog("ERRORE PROVA - " + (error.message || String(error)));
         } finally {
-            button.disabled = false;
-            save.disabled = false;
+            setNexiBusy(false);
+        }
+    }
+
+    async function queryNexi(operation) {
+        if (nexiBusy) return;
+        const cfg = validatedNexiForm();
+        if (!cfg) return;
+
+        setNexiBusy(true);
+        appendNexiLog(operation === "LAST" ? "ULTIMA TRANSAZIONE - richiesta..." : "TOTALI EFT - richiesta...");
+        try {
+            const result = await AppAPI.queryNexi(cfg, operation);
+            if (result.status === "OK")
+                appendNexiLog(operation === "LAST" ? "ULTIMA TRANSAZIONE - risposta ricevuta" : "TOTALI - risposta ricevuta");
+            else
+                appendNexiLog("RISPOSTA NEGATIVA - " + (result.message || "Operazione non completata."));
+            logNexiFields(result.data);
+        } catch (error) {
+            appendNexiLog("ERRORE OPERAZIONE - " + (error.message || String(error)));
+        } finally {
+            setNexiBusy(false);
         }
     }
 
@@ -434,7 +484,7 @@ AppViews.config = (() => {
             "accountPaperWidthMm",
             "saveAccountConfig",
             "nexiHost", "nexiPort", "nexiTerminalId", "nexiRegisterId", "saveNexiConfig",
-            "testNexiConfig", "nexiTestStatus"
+            "nexiReceiptEnabled", "testNexiConfig", "nexiLastTransaction", "nexiTotals", "nexiLog"
         ]
 
         const missing = ids.filter(id => !root.querySelector("#" + id))
@@ -464,6 +514,8 @@ AppViews.config = (() => {
         document.getElementById("saveAccountConfig").addEventListener("click", saveAccountConfig)
         document.getElementById("saveNexiConfig").addEventListener("click", saveNexiConfig)
         document.getElementById("testNexiConfig").addEventListener("click", tryNexiConfig)
+        document.getElementById("nexiLastTransaction").addEventListener("click", () => queryNexi("LAST"))
+        document.getElementById("nexiTotals").addEventListener("click", () => queryNexi("TOTALS"))
     }
 
     function unmount() {}

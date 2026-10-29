@@ -211,6 +211,64 @@
     align-items: end;
 }
 
+#nexiPanel .nexi-receipt-option {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+
+#nexiPanel .nexi-receipt-option input {
+    width: 1.2rem;
+    height: 1.2rem;
+    min-height: 0;
+    margin: 0;
+    flex: none;
+}
+
+.nexi-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: flex-start;
+}
+
+.nexi-actions .btn {
+    width: auto;
+    height: 2.5rem;
+    min-height: 2.5rem;
+    flex: 0 0 auto;
+    padding: 0 0.9rem;
+    font-size: 0.82rem;
+    white-space: nowrap;
+}
+
+.nexi-log-section {
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+#nexiLog {
+    width: 100%;
+    min-height: 8rem;
+    max-height: 14rem;
+    margin: 0;
+    padding: 0.7rem;
+    box-sizing: border-box;
+    overflow: auto;
+    background: #080a0e;
+    color: #d8e2e8;
+    border: 1px solid #323740;
+    border-radius: 0.45rem;
+    font: 0.81rem/1.5 ui-monospace, SFMono-Regular, Consolas, monospace;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    user-select: text;
+}
+
 .password-editor input:disabled,
 .password-editor select:disabled,
 .password-editor button:disabled {

@@ -129,6 +129,10 @@ const AppAPI = (() => {
         return POS.testNexiPayment(config, amount);
     }
 
+    function queryNexi(config, operation) {
+        return POS.queryNexi(config, operation);
+    }
+
     async function saveArticle(article) {
         return Catalog.saveArticle(article);
     }
@@ -212,6 +216,7 @@ const AppAPI = (() => {
         pay,
         validatePos17Config,
         testNexiPayment,
+        queryNexi,
         saveArticle,
         saveReparti,
         getConfig,

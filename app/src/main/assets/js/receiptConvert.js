@@ -1,6 +1,6 @@
 // inizio file receiptConvert.js
 
-function renderReceiptIT(r) {
+function renderReceiptIT(r, options) {
     const out = [];
 
     if (Config.intestazione.riga1)
@@ -60,6 +60,24 @@ function renderReceiptIT(r) {
 
     if (!r.fiscalStatus || r.fiscalStatus === "OK") {
         out.push({ text: "Documento Commerciale Online", align: "center" });
+    }
+
+    // Una sola stringa: la stampante la manda a capo soltanto se finisce la carta.
+    if (options && options.posReceipt === true && r.mp === "CC" &&
+        r.posStatus === "OK" && r.pos17 && r.pos17.success === true) {
+        const pos = r.pos17;
+        const details = ["POS OK", Number(r.totale).toFixed(2) + "€"];
+        function add(label, value) {
+            const text = String(value == null ? "" : value).trim();
+            if (text) details.push(label ? label + ":" + text : text);
+        }
+        add("", pos.pan);
+        add("AUT", pos.authCode);
+        add("STAN", pos.stan);
+        add("ID", pos.idOnline);
+        add("TID", pos.terminalId);
+        add("RRN", pos.rrn);
+        out.push({ text: details.join("  "), align: "left" });
     }
 
     const noteScontrino = String(Config.noteScontrino || "").replace(/\r\n/g, "\n");

@@ -331,7 +331,7 @@ const POS = (() => {
             const printData = renderReceiptIT(Object.assign({}, receipt, {
                 data: receipt.data,
                 ora: receipt.ora
-            }))
+            }), { posReceipt: device.posReceipt === true })
 
             await Bridge.exec("print", {
                 lines: printData,
@@ -558,6 +558,44 @@ const POS = (() => {
         }
     }
 
+    async function queryNexi(config, operation) {
+        const cfg = validatePos17Config(config);
+        if (paymentRunning || nexiTestRunning)
+            throw new Error("Un'operazione POS è già in corso.");
+
+        if (operation !== "LAST" && operation !== "TOTALS")
+            throw new Error("Comando POS non previsto.");
+
+        nexiTestRunning = true;
+        try {
+            return await new Promise(resolve => {
+                try {
+                    if (!TerminalePOS.setupPOS(cfg)) {
+                        resolve({ status: "UNKNOWN", message: "Impossibile inizializzare il terminale Nexi." });
+                        return;
+                    }
+                    const onResult = (ok, data) => {
+                        resolve({
+                            status: ok ? "OK" : "KO",
+                            data: data && typeof data === "object" ? data : null,
+                            message: ok ? "" : (
+                                data && typeof data === "object" && data.errorDescription
+                                    ? data.errorDescription
+                                    : "Nessuna risposta valida dal terminale; riprovare tra qualche secondo."
+                            )
+                        });
+                    };
+                    if (operation === "LAST") TerminalePOS.checkLast(null, null, onResult);
+                    else TerminalePOS.getTotals(null, null, onResult);
+                } catch (error) {
+                    resolve({ status: "UNKNOWN", message: errorMessage(error) });
+                }
+            });
+        } finally {
+            nexiTestRunning = false;
+        }
+    }
+
     async function pay(tipo) {
         if (!items.length) {
             emit("payment:empty", {});
@@ -659,6 +697,7 @@ const POS = (() => {
         pay: pay,
         validatePos17Config: validatePos17Config,
         testNexiPayment: testNexiPayment,
+        queryNexi: queryNexi,
         retryReceipt: retryReceipt,
         retryFiscalAndPrint: retryFiscalAndPrint,
         printAnyway: printAnyway,
