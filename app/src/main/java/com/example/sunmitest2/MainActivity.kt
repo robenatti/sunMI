@@ -43,6 +43,7 @@ class MainActivity : Activity() {
     private var printerService: SunmiPrinterService? = null
     private lateinit var webView: WebView
     private lateinit var printerDriver: SunmiPrinterDriver
+    private lateinit var tcpDriver: TcpSocketDriver
 
     private val callback = object : InnerResultCallback() {
         override fun onRunResult(isSuccess: Boolean) {}
@@ -77,6 +78,15 @@ class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        tcpDriver = TcpSocketDriver { socketId, type, dataBase64, message ->
+            val item = JSONObject().put("socketId", socketId).put("type", type)
+                .put("dataBase64", dataBase64 ?: "").put("message", message ?: "")
+            runOnUiThread {
+                webView.evaluateJavascript(
+                    "window.onNativeSocketEvent(" + JSONObject.quote(item.toString()) + ")", null
+                )
+            }
+        }
         InnerPrinterManager.getInstance().bindService(this, printerCallback)
 
         webView = WebView(this)
@@ -290,6 +300,30 @@ class MainActivity : Activity() {
 
             when (action) {
 
+                "socket_connect" -> {
+                    val data = req.getJSONObject("payload")
+                    tcpDriver.connect(
+                        data.getString("socketId"), data.getString("host"), data.getInt("port"),
+                        data.optInt("readTimeoutMs", 65000)
+                    ) { error ->
+                        if (error == null) sendSuccess(id, JSONObject().put("connected", true))
+                        else sendError(id, "TCP_CONNECT_ERROR", error)
+                    }
+                }
+
+                "socket_write" -> {
+                    val data = req.getJSONObject("payload")
+                    tcpDriver.write(data.getString("socketId"), data.getString("dataBase64")) { error ->
+                        if (error == null) sendSuccess(id, JSONObject().put("written", true))
+                        else sendError(id, "TCP_WRITE_ERROR", error)
+                    }
+                }
+
+                "socket_close" -> {
+                    tcpDriver.close(req.getJSONObject("payload").getString("socketId"))
+                    sendSuccess(id, JSONObject().put("closed", true))
+                }
+
                 "hello" -> {
                     sendSuccess(id, JSONObject().put("msg", "HELLO DAL NATIVE"))
                 }
@@ -424,6 +458,7 @@ class MainActivity : Activity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        if (::tcpDriver.isInitialized) tcpDriver.closeAll()
         InnerPrinterManager.getInstance().unBindService(this, printerCallback)
     }
 }

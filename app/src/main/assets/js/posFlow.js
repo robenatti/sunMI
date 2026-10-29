@@ -477,6 +477,42 @@ const POS = (() => {
         }, 60000)
     }
 
+    function getPos17Config(device) {
+        const remote = Account.getState().device || {};
+        const legacy = Config.terminalePOS && Config.terminalePOS.CC || {};
+        const cfg = Object.assign({}, legacy, remote.pos17 || {}, device.pos17 || {});
+        cfg.host = String(cfg.host || "").trim();
+        cfg.port = Number(cfg.port);
+        cfg.terminalId = String(cfg.terminalId || "").trim();
+        cfg.registerId = String(cfg.registerId || "00000000").trim();
+        if (!cfg.host || !Number.isInteger(cfg.port) || cfg.port < 1 || cfg.port > 65535 ||
+            !/^[0-9]{1,8}$/.test(cfg.terminalId) || !/^[0-9]{1,8}$/.test(cfg.registerId))
+            throw new Error("Nexi Protocollo 17 non configurato: impostare IP, porta e ID nel pannello POS Nexi");
+        return cfg;
+    }
+
+    function executeNexiPayment(cfg, amount) {
+        return new Promise(resolve => {
+            try {
+                if (!TerminalePOS.setupPOS(cfg)) {
+                    resolve({ status: "UNKNOWN", message: "Configurazione POS non valida" });
+                    return;
+                }
+                TerminalePOS.payPOS(null, amount, (ok, data) => {
+                    if (ok && data && data.success === true) {
+                        resolve({ status: "OK", data });
+                    } else if (data && typeof data === "object" && data.result && data.result !== "00") {
+                        resolve({ status: "KO", data, message: "Pagamento rifiutato: codice " + data.result });
+                    } else {
+                        resolve({ status: "UNKNOWN", message: "Esito POS non confermato (" + errorMessage(data) + ")" });
+                    }
+                }, "X");
+            } catch (error) {
+                resolve({ status: "UNKNOWN", message: errorMessage(error) });
+            }
+        });
+    }
+
     async function pay(tipo) {
         if (!items.length) {
             emit("payment:empty", {});
@@ -491,6 +527,33 @@ const POS = (() => {
         try {
             let receipt = await buildReceipt(tipo);
 
+            if (tipo === "CC") {
+                const cfg = getPos17Config(await DB.getDeviceConfig());
+                receipt.documento = "Tentativo POS";
+                receipt.fiscalStatus = "WAIT_POS";
+                receipt.posStatus = "PENDING";
+                receipt = await DB.saveReceipt(receipt);
+
+                emit("terminal:connecting", { total: total });
+                emit("terminal:waiting", { total: total });
+                const payment = await executeNexiPayment(cfg, total);
+
+                receipt.posStatus = payment.status;
+                receipt.lastPosError = payment.message || "";
+                if (payment.data) receipt.pos17 = payment.data;
+
+                if (payment.status !== "OK") {
+                    receipt = await DB.saveReceipt(receipt);
+                    emit(payment.status === "KO" ? "terminal:declined" : "terminal:unknown", {
+                        message: payment.message || "Pagamento POS non riuscito"
+                    });
+                    reset();
+                    return null;
+                }
+
+                receipt.documento = "Ricevuta";
+                receipt.fiscalStatus = "PENDING";
+            }
             receipt = await DB.saveReceipt(receipt);
             emit("receipt:saved", { receipt: receipt });
 
