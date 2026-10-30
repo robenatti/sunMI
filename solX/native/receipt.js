@@ -924,7 +924,7 @@ var Receipt = (function () {
         var directSign = function(){
 
             var xn = "- - - - - -";
-            stream += "H-" + xn + "\n";
+            stream += "C-" + xn + "\n";
         };
 
 
@@ -1092,7 +1092,15 @@ var Receipt = (function () {
 
         directFeed(righeNumeroData);
 
-        strCopy(posCentrato + "Documento del " + ricevuta.data);
+        var oraDocumento = (ricevuta.ora || "").toString().match(/(\d{1,2}):(\d{2})/);
+        var hhmm = oraDocumento ? oraDocumento[1].padStart(2, "0") + ":" + oraDocumento[2] : "";
+        strCopy(posCentrato + "Documento del " + ricevuta.data + (hhmm ? " " + hhmm : ""));
+
+        if(Config.matricolaEPSON){
+            strCopy(posCentrato + "COPIA DEL DOCUMENTO COMMERCIALE");
+            strCopy(posCentrato + "EMESSO SU STAMPANTE");
+            strCopy(posCentrato + "MATRICOLA " + Config.matricolaEPSON);
+        }
 
         var cliente = (Config.noStampaCliente ? "" : ricevuta.cliente);
 
