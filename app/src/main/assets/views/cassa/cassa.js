@@ -143,9 +143,7 @@ AppViews.cassa = (() => {
         const gross = Number((posState.total + posState.items
             .filter(item => item.tessera === true)
             .reduce((sum, item) => sum + Number(item.prezzo || 0) * Number(item.quantita || 1), 0)).toFixed(2));
-        document.getElementById("cartSummary").classList.toggle("has-tessera", hasTessera);
-        document.getElementById("tesseraGrossBox").hidden = !hasTessera;
-        if (hasTessera) document.getElementById("tesseraGrossValue").textContent = money(gross);
+        document.getElementById("tesseraGrossValue").textContent = hasTessera ? money(gross) : "";
 
         document.querySelectorAll(".pos-app button").forEach(button => {
             if (!button.classList.contains("reparto-button") && !button.classList.contains("tool")) {
