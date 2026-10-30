@@ -8,7 +8,6 @@
     const receiptPanel = document.getElementById("receipt");
     const welcomeName = document.getElementById("welcomeName");
     const storeName = document.getElementById("storeName");
-    const heading = document.getElementById("heading");
     const receiptRows = document.getElementById("receiptRows");
     const total = document.getElementById("total");
     const payment = document.getElementById("payment");
@@ -86,7 +85,6 @@
         finalVisible = finale;
         welcome.hidden = true;
         receiptPanel.hidden = false;
-        heading.textContent = finale ? "RICEVUTA" : "IL TUO CARRELLO";
         showRows(rows);
         total.textContent = formatMoney(ricevuta.lordo == null ? ricevuta.totale : ricevuta.lordo);
 
