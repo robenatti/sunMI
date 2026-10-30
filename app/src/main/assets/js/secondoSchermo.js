@@ -7,7 +7,7 @@ const SecondoSchermo = (() => {
 
     function displayReceipt(ricevuta, finale = false) {
         const payload = {
-            ricevuta: ricevuta || { righe: [], totale: 0 },
+            ricevuta: ricevuta || { righe: [], totale: 0, lordo: 0 },
             finale: finale === true,
             intestazione: String((Config.intestazione || {}).riga1 || "")
         };
@@ -20,13 +20,13 @@ const SecondoSchermo = (() => {
         started = true;
 
         POS.on("change", state => {
-            displayReceipt({ righe: state.items, totale: state.total });
+            displayReceipt({ righe: state.items, totale: state.total, lordo: state.lordo });
         });
         POS.on("payment:end", detail => {
             if (detail.receipt) displayReceipt(detail.receipt, true);
         });
 
-        displayReceipt({ righe: [], totale: 0 });
+        displayReceipt({ righe: [], totale: 0, lordo: 0 });
     }
 
     return { init, displayReceipt };

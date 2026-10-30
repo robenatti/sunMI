@@ -41,13 +41,10 @@
             name.textContent = String(row.nome || "Articolo");
 
             const qty = Math.max(1, Math.floor(Number(row.quantita || 1)));
-            if (qty > 1 || row.tessera === true) {
+            if (qty > 1) {
                 const detail = document.createElement("span");
                 detail.className = "row-detail";
-                const notes = [];
-                if (qty > 1) notes.push(qty + " × " + formatMoney(row.prezzo));
-                if (row.tessera === true) notes.push("TESSERA");
-                detail.textContent = notes.join(" · ");
+                detail.textContent = qty + " × " + formatMoney(row.prezzo);
                 name.appendChild(detail);
             }
 
@@ -91,7 +88,7 @@
         receiptPanel.hidden = false;
         heading.textContent = finale ? "RICEVUTA" : "IL TUO CARRELLO";
         showRows(rows);
-        total.textContent = formatMoney(ricevuta.totale);
+        total.textContent = formatMoney(ricevuta.lordo == null ? ricevuta.totale : ricevuta.lordo);
 
         if (!finale) {
             payment.textContent = "";

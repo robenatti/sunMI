@@ -4,6 +4,7 @@
 const POS = (() => {
     let items = [];
     let total = 0;
+    let lordo = 0;
     let listeners = new Map();
     let prepared = false;
     let paymentRunning = false;
@@ -26,6 +27,13 @@ const POS = (() => {
     function quantityOf(item) {
         const value = Math.floor(Number(item && item.quantita || 1));
         return value > 0 ? value : 1;
+    }
+
+    // Somma di tutte le righe, comprese le tessere e gli sconti negativi.
+    function calculateLordo(righe) {
+        return roundMoney(righe.reduce((sum, item) => {
+            return sum + Number(item.prezzo || 0) * quantityOf(item);
+        }, 0));
     }
 
     function on(eventName, callback) {
@@ -65,6 +73,7 @@ const POS = (() => {
     }
 
     function recalc() {
+        lordo = calculateLordo(items);
         total = roundMoney(items.reduce((sum, item) => {
             return item.tessera === true ? sum : sum + Number(item.prezzo || 0) * quantityOf(item);
         }, 0));
@@ -75,6 +84,7 @@ const POS = (() => {
         return {
             items: clone(items),
             total: total,
+            lordo: lordo,
             paymentRunning: paymentRunning,
             connectionStatus: connectionStatus
         };
@@ -184,6 +194,7 @@ const POS = (() => {
     function reset() {
         items = [];
         total = 0;
+        lordo = 0;
         prepared = false;
         paymentRunning = false;
         emit("change", getState());
@@ -243,6 +254,7 @@ const POS = (() => {
             righeL: righe.length,
             totSconto: totSconto,
             totale: roundMoney(total),
+            lordo: calculateLordo(righe),
             totServizi: totServizi,
             totProdotti: totProdotti,
             superConnect: superConnect,
