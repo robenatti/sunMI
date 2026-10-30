@@ -26,6 +26,12 @@ android {
             )
         }
     }
+    // Pagina HTML/CSS/JS del display cliente condivisa con AltraCassa App.
+    sourceSets {
+        getByName("main") {
+            assets.srcDir("../shared")
+        }
+    }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
@@ -72,9 +78,10 @@ val installSolXNativePos = tasks.register("installSolXNativePos") {
     val interfaceJs = commonJs.file("interfaceKotlin.js").asFile
     val netJs = commonJs.file("net-android.js").asFile
     val protocolJs = commonJs.file("protocollo17-nexi.js").asFile
+    val displayJs = layout.projectDirectory.file("native/secondoSchermo.js").asFile
     val destination = layout.projectDirectory.file("src/main/assets/js/protocollo17-nexi.js").asFile
 
-    inputs.files(interfaceJs, netJs, protocolJs)
+    inputs.files(interfaceJs, netJs, protocolJs, displayJs)
     outputs.file(destination)
 
     doLast {
@@ -105,6 +112,9 @@ val installSolXNativePos = tasks.register("installSolXNativePos") {
                 """.trimIndent()
             )
             appendLine(netJs.readText(Charsets.UTF_8))
+            // Adapter cliente nello stesso bundle del POS, senza altri script HTML.
+            // Bridge resta disponibile grazie alla IIFE condivisa.
+            appendLine(displayJs.readText(Charsets.UTF_8))
             appendLine("})();")
             appendLine(protocolJs.readText(Charsets.UTF_8))
             appendLine(
