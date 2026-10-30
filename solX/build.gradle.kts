@@ -107,6 +107,70 @@ val installSolXNativePos = tasks.register("installSolXNativePos") {
             appendLine(netJs.readText(Charsets.UTF_8))
             appendLine("})();")
             appendLine(protocolJs.readText(Charsets.UTF_8))
+            appendLine(
+                """
+                // Adattatore POS SolX: risolve Config.terminalePOS["CC"].
+                // Il protocollo condiviso con AltraCassa rimane invariato.
+                (function () {
+                    "use strict";
+
+                    var originalSetup = TerminalePOS.setupPOS;
+                    var configured = false;
+
+                    function configFromSolX() {
+                        if (typeof Config === "undefined" || !Config || !Config.terminalePOS)
+                            return null;
+                        var pos = Config.terminalePOS;
+                        return pos["CC"] || (pos.host ? pos : null);
+                    }
+
+                    function validConfig(cfg) {
+                        return !!(cfg && cfg.host && cfg.port && cfg.terminalId);
+                    }
+
+                    function configure(cfg) {
+                        // SolX usa per prima la configurazione CC del salone.
+                        // Non si tenta di leggere il vecchio file INI Windows nella WebView.
+                        var salonConfig = configFromSolX();
+                        var effective = validConfig(salonConfig) ? salonConfig : cfg;
+                        if (!validConfig(effective)) return false;
+                        var result = originalSetup(effective);
+                        configured = !!result;
+                        return result;
+                    }
+
+                    TerminalePOS.setupPOS = configure;
+
+                    [
+                        ["checkPOS", 1],
+                        ["payPOS", 2],
+                        ["extendedPOS", 2],
+                        ["refundPOS", 2],
+                        ["checkLast", 2],
+                        ["getTotals", 2],
+                        ["rePrint", 2],
+                        ["closeDay", 2]
+                    ].forEach(function (item) {
+                        var name = item[0], callbackIndex = item[1];
+                        var original = TerminalePOS[name];
+                        TerminalePOS[name] = function () {
+                            var args = Array.prototype.slice.call(arguments);
+                            if (!configured || args[0] != null) {
+                                if (!configure(args[0])) {
+                                    if (typeof args[callbackIndex] === "function")
+                                        args[callbackIndex](false, "CONFIG_POS_NON_VALIDA: impostare Config.terminalePOS.CC con host, port, terminalId e registerId");
+                                    return false;
+                                }
+                            }
+                            // La configurazione e' gia' stata memorizzata in CFG.
+                            // Evita che il modulo originale tenti di leggere un file INI.
+                            args[0] = null;
+                            return original.apply(TerminalePOS, args);
+                        };
+                    });
+                })();
+                """.trimIndent()
+            )
         }
         destination.parentFile.mkdirs()
         destination.writeText(bundled, Charsets.UTF_8)
