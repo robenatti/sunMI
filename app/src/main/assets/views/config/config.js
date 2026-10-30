@@ -308,6 +308,18 @@ AppViews.config = (() => {
         const savedReceiptFlag = Object.prototype.hasOwnProperty.call(local, "posReceipt")
             ? local.posReceipt : remote.posReceipt;
         document.getElementById("nexiReceiptEnabled").checked = savedReceiptFlag === true;
+        const enabled = Object.prototype.hasOwnProperty.call(local, "posEnabled")
+            ? local.posEnabled === true : remote.posEnabled === true;
+        const allowed = (AppAPI.getAccountState().account || {}).allowPosTerminal === true;
+        document.getElementById("posEnabled").checked = allowed && enabled;
+        document.getElementById("posEnabled").disabled = !allowed;
+        document.getElementById("posRemotePermission").textContent = allowed
+            ? "Collegamento al terminale POS abilitato da account remoto."
+            : "Terminale automatico non abilitato dall'account remoto (allowPosTerminal). Pagamenti manuali disponibili.";
+        ["nexiHost", "nexiPort", "nexiTerminalId", "nexiRegisterId",
+            "testNexiConfig", "nexiLastTransaction", "nexiTotals"].forEach(id => {
+                document.getElementById(id).disabled = !allowed;
+            });
     }
 
     function readNexiForm() {
@@ -378,15 +390,23 @@ AppViews.config = (() => {
 
     async function saveNexiConfig() {
         if (nexiBusy) return;
-        const pos17 = validatedNexiForm();
-        if (!pos17) return;
+        const authorized = (AppAPI.getAccountState().account || {}).allowPosTerminal === true;
+        const posEnabled = authorized && document.getElementById("posEnabled").checked;
+        const entered = readNexiForm();
+        const hasTcpData = !!(entered.host.trim() || entered.port.trim() || entered.terminalId.trim());
+        // Per i pagamenti manuali i campi TCP possono essere vuoti.
+        const pos17 = (authorized && (posEnabled || hasTcpData)) ? validatedNexiForm() : null;
+        if (authorized && (posEnabled || hasTcpData) && !pos17) return;
         try {
-            configData = await AppAPI.saveDeviceConfig({
-                pos17,
+            const changes = {
+                posEnabled,
                 posReceipt: document.getElementById("nexiReceiptEnabled").checked
-            });
+            };
+            if (pos17) changes.pos17 = pos17;
+            configData = await AppAPI.saveDeviceConfig(changes);
             renderNexiConfig();
-            appendNexiLog("Configurazione Nexi salvata. Ricevuta POS: " +
+            appendNexiLog("Configurazione POS salvata. Terminale: " +
+                (posEnabled ? "ABILITATO" : "MANUALE") + " - Ricevuta POS: " +
                 (configData.device.posReceipt === true ? "SI" : "NO"));
         } catch (error) {
             appendNexiLog("ERRORE SALVATAGGIO - " + (error.message || String(error)));
@@ -484,7 +504,7 @@ AppViews.config = (() => {
             "accountPaperWidthMm",
             "saveAccountConfig",
             "nexiHost", "nexiPort", "nexiTerminalId", "nexiRegisterId", "saveNexiConfig",
-            "nexiReceiptEnabled", "testNexiConfig", "nexiLastTransaction", "nexiTotals", "nexiLog"
+            "posEnabled", "posRemotePermission", "nexiReceiptEnabled", "testNexiConfig", "nexiLastTransaction", "nexiTotals", "nexiLog"
         ]
 
         const missing = ids.filter(id => !root.querySelector("#" + id))

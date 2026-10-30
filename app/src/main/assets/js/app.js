@@ -97,6 +97,10 @@ const AppAPI = (() => {
         POS.removeItem(index);
     }
 
+    function toggleTessera(index) {
+        POS.toggleTessera(index);
+    }
+
     function setItemPrice(index, price) {
         POS.setPrice(index, price);
     }
@@ -117,8 +121,8 @@ const AppAPI = (() => {
         POS.reset();
     }
 
-    function pay(tipo) {
-        return POS.pay(tipo);
+    function pay(tipo, options) {
+        return POS.pay(tipo, options);
     }
 
     function validatePos17Config(config) {
@@ -208,6 +212,7 @@ const AppAPI = (() => {
         scanBarcode,
         getPosState,
         removeItem,
+        toggleTessera,
         setItemPrice,
         setItemValues,
         duplicateItem,

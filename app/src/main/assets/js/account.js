@@ -98,6 +98,7 @@ const Account = (() => {
         Config.allowChangeUsername = account.allowChangeUsername === true
         Config.allowChangePassword = account.allowChangePassword === true
         Config.allowAddCash = account.allowAddCash === true
+        Config.allowPosTerminal = account.allowPosTerminal === true
         Config.admin = !!(currentDevice && currentDevice.admin === true)
 
         if (account.intestazione) {

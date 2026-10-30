@@ -32,14 +32,14 @@
 
         <div class="keypad-zone" id="keypad">
             <div class="display-line">
-                <button class="selected-display quantity-display active" id="quantityBox" type="button">
+                <button class="selected-display quantity-display" id="quantityBox" type="button">
                     <span class="display-label">QTA</span>
                     <span class="selected-quantity" id="quantityDisplay">1</span>
                 </button>
 
                 <button class="btn key multiply-key" data-key="X" type="button">X</button>
 
-                <button class="selected-display amount-display" id="amountBox" type="button">
+                <button class="selected-display amount-display active" id="amountBox" type="button">
                     <span class="display-label">IMPORTO</span>
                     <span class="selected-price" id="selectedPrice">0,00 €</span>
                 </button>
@@ -65,12 +65,11 @@
                     <button class="btn key ok icon-button" data-key="OK" type="button" title="Conferma" aria-label="Conferma">
                         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4 4L19 6.5"/></svg>
                     </button>
-                    <button class="btn action annulla icon-button cancel-button" id="cancelSale" type="button" title="Annulla" aria-label="Annulla">
-                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7L4 12l5 5M5 12h8a6 6 0 0 1 6 6"/></svg>
-                        <span class="action-counter" id="cancelCount"></span>
-                    </button>
-                    <button class="btn selected-delete icon-button" id="deleteItem" type="button" title="Elimina riga" aria-label="Elimina riga">
+                    <button class="btn selected-delete icon-button" id="deleteItem" type="button" title="Cancella riga" aria-label="Cancella riga">
                         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 10v7M14 10v7"/></svg>
+                    </button>
+                    <button class="btn tessera-button icon-button" id="tesseraItem" type="button" title="Prestazione a tessera" aria-label="Prestazione a tessera">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="5" width="19" height="14" rx="2"/><path d="M2.5 10h19M6.5 15h5"/></svg>
                     </button>
                     <button class="btn selected-discount icon-button" id="discountItem" type="button" title="Sconto" aria-label="Sconto">
                         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h9l7 7-8 8-8-8V5zM8 9h.01"/><text x="11" y="16">%</text></svg>
@@ -86,6 +85,9 @@
         <button class="btn action tool" id="openSummary" title="Riepilogo">☷</button>
         <button class="btn action contanti" id="cashPayment">CONTANTI</button>
         <button class="btn action pos" id="cardPayment">POS</button>
+        <button class="btn action icon-button terminal-toggle" id="disablePosForSale" type="button" title="Disabilita il terminale POS per questa vendita" aria-label="Disabilita il terminale POS per questa vendita" aria-pressed="false">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="2.5" width="14" height="19" rx="2"/><path d="M8 6h8M8 10h8M8 15h8M8 18h2"/></svg>
+        </button>
     </div>
 </div>
 

@@ -5,10 +5,11 @@ AppViews.cassa = (() => {
     let selectedIndex = -1;
     let quantityBuffer = "";
     let amountBuffer = "";
-    let activeInput = "quantity";
+    let activeInput = "amount";
     let percentMode = false;
-    let cancelCount = 0;
-    let cancelTimer = null;
+    let posErrorTimer = null;
+    let posManualForSale = false;
+    let posTerminalDefault = false;
     let unsubscribers = [];
     let lastItemCount = 0;
     let pendingReceiptId = "";
@@ -35,14 +36,6 @@ AppViews.cassa = (() => {
     function selectedItem() {
         const items = state().items;
         return selectedIndex >= 0 && selectedIndex < items.length ? items[selectedIndex] : null;
-    }
-
-    function resetCancel() {
-        cancelCount = 0;
-        if (cancelTimer) clearTimeout(cancelTimer);
-        cancelTimer = null;
-        const box = document.getElementById("cancelCount");
-        if (box) box.textContent = "";
     }
 
     function renderDisplays(showCurrent) {
@@ -72,7 +65,7 @@ AppViews.cassa = (() => {
     function clearInput(showCurrent) {
         quantityBuffer = "";
         amountBuffer = "";
-        activeInput = "quantity";
+        activeInput = "amount";
         percentMode = false;
         renderDisplays(showCurrent !== false);
     }
@@ -90,13 +83,14 @@ AppViews.cassa = (() => {
         const p = Number(item.prezzo || 0);
         const row = document.createElement("button");
         row.type = "button";
-        row.className = "cart-row" + (index === selectedIndex ? " selected" : "");
+        row.className = "cart-row" + (index === selectedIndex ? " selected" : "") +
+            (item.tessera === true ? " tessera" : "");
         row.style.display = "grid";
         row.style.gridTemplateColumns = "minmax(0,1fr) auto minmax(5.5rem,1fr)";
         row.style.columnGap = "0.65rem";
 
         const name = document.createElement("span");
-        name.textContent = item.nome;
+        name.textContent = item.nome + (item.tessera === true ? " [TESSERA]" : "");
         name.style.overflow = "hidden";
         name.style.textOverflow = "ellipsis";
         name.style.whiteSpace = "nowrap";
@@ -115,7 +109,7 @@ AppViews.cassa = (() => {
         }
 
         const total = document.createElement("span");
-        total.textContent = money(p * q);
+        total.textContent = item.tessera === true ? "TESSERA" : money(p * q);
         total.style.gridColumn = "3";
         total.style.justifySelf = "end";
         total.style.fontWeight = "600";
@@ -123,7 +117,6 @@ AppViews.cassa = (() => {
         row.appendChild(total);
 
         row.addEventListener("click", () => {
-            resetCancel();
             selectedIndex = index;
             clearInput(true);
             renderCart();
@@ -151,12 +144,18 @@ AppViews.cassa = (() => {
                 button.disabled = posState.paymentRunning || button.classList.contains("empty");
             }
         });
+        const tessera = document.getElementById("tesseraItem");
+        if (tessera) {
+            const item = selectedItem();
+            tessera.disabled = posState.paymentRunning || !item || item.tipo !== "S" || item.sconto === true;
+            tessera.classList.toggle("active", !!item && item.tessera === true);
+        }
+        renderTerminalToggle();
         renderDisplays(true);
         if (selectedIndex === posState.items.length - 1 && selectedIndex >= 0) container.scrollTop = container.scrollHeight;
     }
 
     function addArticle(id) {
-        resetCancel();
         AppAPI.addArticolo(id, null);
         clearInput(true);
     }
@@ -241,7 +240,6 @@ AppViews.cassa = (() => {
     }
 
     function selectInput(name) {
-        resetCancel();
         activeInput = name;
         percentMode = false;
         if (name === "quantity") quantityBuffer = "";
@@ -250,7 +248,6 @@ AppViews.cassa = (() => {
     }
 
     function appendKey(key) {
-        resetCancel();
         if (activeInput === "quantity") {
             if (key === "." || key === ",") return;
             quantityBuffer = quantityBuffer === "0" ? key : quantityBuffer + key;
@@ -264,7 +261,6 @@ AppViews.cassa = (() => {
     }
 
     function multiply() {
-        resetCancel();
         const item = selectedItem();
         if (!item || selectedIndex < 0) return;
         const q = quantityBuffer ? Math.floor(Number(quantityBuffer)) : Number(item.quantita || 1);
@@ -277,7 +273,6 @@ AppViews.cassa = (() => {
     }
 
     function confirm() {
-        resetCancel();
         const item = selectedItem();
         if (!item || selectedIndex < 0 || percentMode) return;
         const q = quantityBuffer ? Math.floor(Number(quantityBuffer)) : Number(item.quantita || 1);
@@ -288,31 +283,10 @@ AppViews.cassa = (() => {
     }
 
     function discount() {
-        resetCancel();
         const value = parseAmount(amountBuffer);
         if (value == null || value <= 0) return;
         AppAPI.addDiscount(value, percentMode);
         clearInput(true);
-    }
-
-    function cancel() {
-        quantityBuffer = "";
-        amountBuffer = "";
-        activeInput = "quantity";
-        percentMode = false;
-        renderDisplays(false);
-        cancelCount++;
-        const counter = document.getElementById("cancelCount");
-        if (counter && cancelCount < 3) counter.textContent = cancelCount + "/3";
-        if (cancelTimer) clearTimeout(cancelTimer);
-        if (cancelCount >= 3) {
-            resetCancel();
-            selectedIndex = -1;
-            lastItemCount = 0;
-            AppAPI.resetPos();
-            return;
-        }
-        cancelTimer = setTimeout(resetCancel, 2500);
     }
 
     function handleKey(key) {
@@ -320,13 +294,44 @@ AppViews.cassa = (() => {
         else if (key === "X") multiply();
         else if (key === "OK") confirm();
         else if (key === "%") {
-            resetCancel();
             quantityBuffer = "";
             amountBuffer = "";
             activeInput = "amount";
             percentMode = true;
             renderDisplays(true);
         }
+    }
+
+    function renderTerminalToggle() {
+        const button = document.getElementById("disablePosForSale");
+        if (!button) return;
+        const off = !posTerminalDefault || posManualForSale;
+        button.classList.toggle("off", off);
+        button.disabled = state().paymentRunning || !posTerminalDefault;
+        button.setAttribute("aria-pressed", String(posManualForSale));
+        button.title = off ? "Terminale POS disattivato: pagamento manuale" :
+            "Terminale POS attivo: tocca per disabilitarlo per questa vendita";
+        button.setAttribute("aria-label", button.title);
+    }
+
+    function clearPosErrorTimer() {
+        if (posErrorTimer) clearInterval(posErrorTimer);
+        posErrorTimer = null;
+    }
+
+    function showPosFailure(message) {
+        clearPosErrorTimer();
+        const started = Date.now();
+        showProgress(message, 0, true);
+        posErrorTimer = setInterval(() => {
+            const percent = Math.min(100, Math.round((Date.now() - started) / 100));
+            document.getElementById("progressFill").style.width = percent + "%";
+            document.getElementById("progressPercent").textContent = percent + "%";
+            if (percent >= 100) {
+                clearPosErrorTimer();
+                document.getElementById("progressPopup").classList.remove("show", "error");
+            }
+        }, 100);
     }
 
     function showProgress(message, percent, error) {
@@ -382,7 +387,6 @@ AppViews.cassa = (() => {
         document.getElementById("articleSearch").addEventListener("input", event => renderList(event.target.value));
         document.getElementById("deleteItem").addEventListener("click", () => {
             if (selectedIndex < 0) return;
-            resetCancel();
             const count = state().items.length;
             const removed = selectedIndex;
             if (count <= 1) selectedIndex = -1;
@@ -391,9 +395,17 @@ AppViews.cassa = (() => {
             clearInput(true);
         });
         document.getElementById("discountItem").addEventListener("click", discount);
-        document.getElementById("cancelSale").addEventListener("click", cancel);
+        document.getElementById("tesseraItem").addEventListener("click", () => {
+            if (selectedIndex >= 0) AppAPI.toggleTessera(selectedIndex);
+        });
+        document.getElementById("disablePosForSale").addEventListener("click", () => {
+            if (!posTerminalDefault || state().paymentRunning) return;
+            posManualForSale = !posManualForSale;
+            renderTerminalToggle();
+        });
         document.getElementById("cashPayment").addEventListener("click", () => AppAPI.pay("CA").catch(() => {}));
-        document.getElementById("cardPayment").addEventListener("click", () => AppAPI.pay("CC").catch(() => {}));
+        document.getElementById("cardPayment").addEventListener("click", () =>
+            AppAPI.pay("CC", { manualPos: posManualForSale || !posTerminalDefault }).catch(() => {}));
         document.getElementById("networkConfirm").addEventListener("change", event => {
             document.getElementById("networkPrint").disabled = networkBusy || !event.target.checked;
         });
@@ -439,13 +451,20 @@ AppViews.cassa = (() => {
     }
 
     async function audit(root) {
-        const ids = ["reparti", "articoliBottoni", "articoliListaPanel", "articleSearch", "articoliLista", "carrello", "lineCount", "articleCount", "totalValue", "quantityBox", "quantityDisplay", "amountBox", "selectedPrice", "keypad", "deleteItem", "discountItem", "cancelSale", "openConfig", "openSummary", "cashPayment", "cardPayment", "progressPopup", "appVersion", "connectionLight", "networkPopup", "networkConfirm", "networkRetry", "networkPrint", "networkCancel"];
+        const ids = ["reparti", "articoliBottoni", "articoliListaPanel", "articleSearch", "articoliLista", "carrello", "lineCount", "articleCount", "totalValue", "quantityBox", "quantityDisplay", "amountBox", "selectedPrice", "keypad", "deleteItem", "discountItem", "tesseraItem", "disablePosForSale", "openConfig", "openSummary", "cashPayment", "cardPayment", "progressPopup", "appVersion", "connectionLight", "networkPopup", "networkConfirm", "networkRetry", "networkPrint", "networkCancel"];
         const missing = ids.filter(id => !root.querySelector("#" + id));
         if (missing.length) throw new Error("Elementi DOM mancanti: " + missing.join(", "));
         return { ok: true, elements: ids.length };
     }
 
     async function mount() {
+        const accountState = AppAPI.getAccountState();
+        const device = await AppAPI.getDeviceConfig();
+        const remote = accountState.device || {};
+        const enabled = Object.prototype.hasOwnProperty.call(device, "posEnabled")
+            ? device.posEnabled === true : remote.posEnabled === true;
+        posTerminalDefault = !!(accountState.account && accountState.account.allowPosTerminal === true && enabled);
+        posManualForSale = false;
         lastItemCount = state().items.length;
         selectedIndex = lastItemCount ? lastItemCount - 1 : -1;
         clearInput(true);
@@ -456,20 +475,23 @@ AppViews.cassa = (() => {
         updateConnectionLight(state().connectionStatus);
         unsubscribers.push(AppAPI.on("pos:connection:status", detail => updateConnectionLight(detail.status)));
         unsubscribers.push(AppAPI.on("pos:change", renderCart));
+        unsubscribers.push(AppAPI.on("pos:reset", () => {
+            posManualForSale = false;
+            clearPosErrorTimer();
+            renderTerminalToggle();
+        }));
         unsubscribers.push(AppAPI.on("pos:payment:empty", () => alert("Nessun articolo inserito")));
         unsubscribers.push(AppAPI.on("barcode:notfound", detail => alert("Barcode non trovato: " + detail.code)));
-        unsubscribers.push(AppAPI.on("pos:payment:start", () => showProgress("Preparazione scontrino...", 10)));
-        unsubscribers.push(AppAPI.on("pos:terminal:connecting", () => showProgress("Connessione a Nexi...", 10)));
+        unsubscribers.push(AppAPI.on("pos:payment:start", () => {
+            clearPosErrorTimer();
+            showProgress("Preparazione scontrino...", 10);
+        }));
+        unsubscribers.push(AppAPI.on("pos:terminal:connecting", () => showProgress("Connessione al terminale POS...", 10)));
         unsubscribers.push(AppAPI.on("pos:terminal:waiting", () => showProgress("In attesa del pagamento sul POS...", 20)));
-        unsubscribers.push(AppAPI.on("pos:terminal:declined", detail => {
-            document.getElementById("progressPopup").classList.remove("show", "error");
-            alert(detail.message || "Pagamento POS rifiutato");
-        }));
-        unsubscribers.push(AppAPI.on("pos:terminal:unknown", detail => {
-            document.getElementById("progressPopup").classList.remove("show", "error");
-            alert((detail.message || "Esito POS incerto") +
-                ". Verificare la transazione sul POS prima di ripetere il pagamento. Nessuna fiscalizzazione inviata.");
-        }));
+        unsubscribers.push(AppAPI.on("pos:terminal:declined", () =>
+            showPosFailure("POS FALLITO, riprovare")));
+        unsubscribers.push(AppAPI.on("pos:terminal:unknown", () =>
+            showPosFailure("ESITO POS INCERTO - verificare prima di riprovare")));
         unsubscribers.push(AppAPI.on("pos:fiscal:start", () => showProgress("Collegamento al cassetto fiscale...", 30)));
         unsubscribers.push(AppAPI.on("pos:fiscal:end", detail => {
             if (detail && detail.error) {
@@ -501,8 +523,7 @@ AppViews.cassa = (() => {
     function unmount() {
         unsubscribers.forEach(fn => fn());
         unsubscribers = [];
-        if (cancelTimer) clearTimeout(cancelTimer);
-        cancelTimer = null;
+        clearPosErrorTimer();
     }
 
     return { mount, unmount, audit };

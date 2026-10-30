@@ -20,7 +20,7 @@ function renderReceiptIT(r, options) {
     out.push({ newline: 1 });
     out.push({ columns: ["DESCRIZIONE", "IVA", "PREZZO (€)"], bold: true });
 
-    r.righe.forEach(row => {
+    r.righe.filter(row => row.tessera !== true).forEach(row => {
         const iva = row.iva || Config.iva || "22%";
         const quantita = Number(row.quantita || 1);
         const descrizione = quantita > 1 ? quantita + " x " + row.nome : row.nome;
@@ -64,6 +64,9 @@ function renderReceiptIT(r, options) {
 
     // Una sola stringa: la stampante la manda a capo soltanto se finisce la carta.
     if (options && options.posReceipt === true && r.mp === "CC" &&
+        r.posStatus === "MANUAL") {
+        out.push({ text: "POS MANUALE  " + Number(r.totale).toFixed(2) + "€", align: "left" });
+    } else if (options && options.posReceipt === true && r.mp === "CC" &&
         r.posStatus === "OK" && r.pos17 && r.pos17.success === true) {
         const pos = r.pos17;
         const details = ["POS OK", Number(r.totale).toFixed(2) + "€"];

@@ -66,7 +66,7 @@ const POS = (() => {
 
     function recalc() {
         total = roundMoney(items.reduce((sum, item) => {
-            return sum + Number(item.prezzo || 0) * quantityOf(item);
+            return item.tessera === true ? sum : sum + Number(item.prezzo || 0) * quantityOf(item);
         }, 0));
         emit("change", getState());
     }
@@ -119,6 +119,14 @@ const POS = (() => {
         const idx = Number(index);
         if (idx < 0 || idx >= items.length) return;
         items.splice(idx, 1);
+        recalc();
+    }
+
+    function toggleTessera(index) {
+        if (paymentRunning) return;
+        const item = items[Number(index)];
+        if (!item || item.tipo !== "S" || item.sconto === true) return;
+        item.tessera = item.tessera !== true;
         recalc();
     }
 
@@ -211,13 +219,13 @@ const POS = (() => {
         const righe = clone(items);
 
         const totServizi = roundMoney(righe
-            .filter(r => r.tipo === "S" && !r.sconto)
+            .filter(r => r.tipo === "S" && !r.sconto && r.tessera !== true)
             .reduce((sum, r) => sum + Number(r.prezzo || 0) * quantityOf(r), 0));
         const totProdotti = roundMoney(righe
-            .filter(r => r.tipo === "P")
+            .filter(r => r.tipo === "P" && r.tessera !== true)
             .reduce((sum, r) => sum + Number(r.prezzo || 0) * quantityOf(r), 0));
         const totSconto = roundMoney(righe
-            .filter(r => r.sconto || Number(r.prezzo || 0) < 0)
+            .filter(r => r.tessera !== true && (r.sconto || Number(r.prezzo || 0) < 0))
             .reduce((sum, r) => sum + Math.abs(Number(r.prezzo || 0) * quantityOf(r)), 0));
 
         return {
@@ -596,7 +604,11 @@ const POS = (() => {
         }
     }
 
-    async function pay(tipo) {
+    function isTerminalAuthorized() {
+        return (Account.getState().account || {}).allowPosTerminal === true;
+    }
+
+    async function pay(tipo, options) {
         if (!items.length) {
             emit("payment:empty", {});
             return null;
@@ -608,11 +620,31 @@ const POS = (() => {
         emit("payment:start", { tipo: tipo, total: total });
 
         try {
-            // Validazione prima di creare o salvare qualunque documento di vendita.
-            const cfg = tipo === "CC" ? getPos17Config(await DB.getDeviceConfig()) : null;
+            const device = await DB.getDeviceConfig();
+            const remoteDevice = Account.getState().device || {};
+            const defaultAuto = Object.prototype.hasOwnProperty.call(device, "posEnabled")
+                ? device.posEnabled === true : remoteDevice.posEnabled === true;
+            const automatic = tipo === "CC" && isTerminalAuthorized() &&
+                defaultAuto && !(options && options.manualPos === true);
+            const cfg = automatic ? getPos17Config(device) : null;
             let receipt = await buildReceipt(tipo);
 
-            if (tipo === "CC") {
+            // Con sola tessera si conserva una registrazione non fiscale, senza addebito.
+            if (receipt.righe.every(row => row.tessera === true)) {
+                receipt.documento = "Tessera";
+                receipt.mp = "TESSERA";
+                receipt.fiscalStatus = "SKIPPED";
+                receipt.printStatus = "SKIPPED";
+                receipt = await DB.saveReceipt(receipt);
+                emit("payment:end", { receipt, fiscalError: false, printError: false });
+                reset();
+                return receipt;
+            }
+            if (receipt.totale <= 0)
+                throw new Error("Totale da incassare non valido. Controllare sconti e tessere.");
+
+            if (tipo === "CC" && automatic) {
+                receipt.posMode = "AUTO";
                 receipt.documento = "Tentativo POS";
                 receipt.fiscalStatus = "WAIT_POS";
                 receipt.posStatus = "PENDING";
@@ -639,6 +671,10 @@ const POS = (() => {
 
                 receipt.documento = "Ricevuta";
                 receipt.fiscalStatus = "PENDING";
+            } else if (tipo === "CC") {
+                // Pagamento elettronico effettuato fuori dall'app, senza terminale TCP.
+                receipt.posMode = "MANUAL";
+                receipt.posStatus = "MANUAL";
             }
             receipt = await DB.saveReceipt(receipt);
             emit("receipt:saved", { receipt: receipt });
@@ -689,6 +725,7 @@ const POS = (() => {
         getState: getState,
         addArticle: addArticle,
         removeItem: removeItem,
+        toggleTessera: toggleTessera,
         setPrice: setPrice,
         setItemValues: setItemValues,
         duplicateItem: duplicateItem,

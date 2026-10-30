@@ -26,7 +26,7 @@ const Fiscal = (() => {
             _id: receipt._id,
             totale: receipt.totale.toString().replace(".", ","),
             mp: receipt.mp === "CC" ? "POS" : "CONTANTI",
-            servizi: receipt.righe
+            servizi: receipt.righe.filter(row => row.tessera !== true)
         }
 
         const paramS =
