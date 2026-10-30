@@ -1,6 +1,33 @@
 window.AppViews = window.AppViews || {}
 
 AppViews.riepilogo = (() => {
+    let cancelProgressTimer = null
+    let cancelCloseTimer = null
+    let cancelBusy = false
+
+    function showCancelProgress(message, percent, error) {
+        const popup = document.getElementById("cancelProgressPopup")
+        if (!popup) return
+        popup.classList.add("show")
+        popup.classList.toggle("error", !!error)
+        document.getElementById("cancelProgressMessage").textContent = message
+        document.getElementById("cancelProgressFill").style.width = percent + "%"
+        document.getElementById("cancelProgressPercent").textContent = percent + "%"
+    }
+
+    function stopCancelProgressTimer() {
+        if (cancelProgressTimer) clearInterval(cancelProgressTimer)
+        cancelProgressTimer = null
+    }
+
+    function closeCancelProgressAfter(ms) {
+        if (cancelCloseTimer) clearTimeout(cancelCloseTimer)
+        cancelCloseTimer = setTimeout(() => {
+            document.getElementById("cancelProgressPopup")?.classList.remove("show", "error")
+            cancelCloseTimer = null
+        }, ms)
+    }
+
     function money(value) {
         return Number(value || 0).toLocaleString("it-IT", {
             minimumFractionDigits: 2,
@@ -150,14 +177,34 @@ AppViews.riepilogo = (() => {
 
             if (!confirm(domanda)) return
 
+            if (cancelBusy) return
+            cancelBusy = true
             button.disabled = true
+            if (cancelCloseTimer) clearTimeout(cancelCloseTimer)
+            let progress = 10
+            showCancelProgress(fiscale ? "Collegamento all'Agenzia delle Entrate..." :
+                "Annullamento ricevuta...", progress, false)
+            stopCancelProgressTimer()
+            cancelProgressTimer = setInterval(() => {
+                progress = Math.min(85, progress + 5)
+                showCancelProgress(fiscale ? "Annullamento fiscale in corso..." :
+                    "Annullamento ricevuta...", progress, false)
+            }, 500)
 
             try {
                 await AppAPI.cancelReceipt(receipt._id)
-            } catch (e) {
-                alert("Annullamento non completato: " + (e && e.message ? e.message : String(e)))
-            } finally {
+                stopCancelProgressTimer()
                 await refresh()
+                showCancelProgress("Annullamento completato", 100, false)
+                closeCancelProgressAfter(700)
+            } catch (e) {
+                stopCancelProgressTimer()
+                showCancelProgress("Annullamento non completato: " +
+                    (e && e.message ? e.message : String(e)), 100, true)
+                closeCancelProgressAfter(3500)
+                await refresh().catch(() => {})
+            } finally {
+                cancelBusy = false
             }
         })
 
@@ -219,7 +266,11 @@ AppViews.riepilogo = (() => {
             "sumDiscounts",
             "sumDocuments",
             "receiptRows",
-            "receiptDetail"
+            "receiptDetail",
+            "cancelProgressPopup",
+            "cancelProgressMessage",
+            "cancelProgressFill",
+            "cancelProgressPercent"
         ]
 
         const missing = ids.filter(id => !root.querySelector("#" + id))
@@ -275,7 +326,12 @@ AppViews.riepilogo = (() => {
         await refresh()
     }
 
-    function unmount() {}
+    function unmount() {
+        stopCancelProgressTimer()
+        if (cancelCloseTimer) clearTimeout(cancelCloseTimer)
+        cancelCloseTimer = null
+        cancelBusy = false
+    }
 
     return { mount, unmount, audit }
 })()

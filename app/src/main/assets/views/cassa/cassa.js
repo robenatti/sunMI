@@ -109,7 +109,7 @@ AppViews.cassa = (() => {
         }
 
         const total = document.createElement("span");
-        total.textContent = item.tessera === true ? "TESSERA" : money(p * q);
+        total.textContent = money(p * q);
         total.style.gridColumn = "3";
         total.style.justifySelf = "end";
         total.style.fontWeight = "600";
@@ -138,6 +138,14 @@ AppViews.cassa = (() => {
         document.getElementById("lineCount").textContent = String(posState.items.length);
         document.getElementById("articleCount").textContent = String(articles);
         document.getElementById("totalValue").textContent = money(posState.total);
+
+        const hasTessera = posState.items.some(item => item.tessera === true);
+        const gross = Number((posState.total + posState.items
+            .filter(item => item.tessera === true)
+            .reduce((sum, item) => sum + Number(item.prezzo || 0) * Number(item.quantita || 1), 0)).toFixed(2));
+        document.getElementById("cartSummary").classList.toggle("has-tessera", hasTessera);
+        document.getElementById("tesseraGrossBox").hidden = !hasTessera;
+        if (hasTessera) document.getElementById("tesseraGrossValue").textContent = money(gross);
 
         document.querySelectorAll(".pos-app button").forEach(button => {
             if (!button.classList.contains("reparto-button") && !button.classList.contains("tool")) {
@@ -324,7 +332,7 @@ AppViews.cassa = (() => {
         const started = Date.now();
         showProgress(message, 0, true);
         posErrorTimer = setInterval(() => {
-            const percent = Math.min(100, Math.round((Date.now() - started) / 100));
+            const percent = Math.min(100, Math.round((Date.now() - started) / 3000 * 100));
             document.getElementById("progressFill").style.width = percent + "%";
             document.getElementById("progressPercent").textContent = percent + "%";
             if (percent >= 100) {
@@ -451,7 +459,7 @@ AppViews.cassa = (() => {
     }
 
     async function audit(root) {
-        const ids = ["reparti", "articoliBottoni", "articoliListaPanel", "articleSearch", "articoliLista", "carrello", "lineCount", "articleCount", "totalValue", "quantityBox", "quantityDisplay", "amountBox", "selectedPrice", "keypad", "deleteItem", "discountItem", "tesseraItem", "disablePosForSale", "openConfig", "openSummary", "cashPayment", "cardPayment", "progressPopup", "appVersion", "connectionLight", "networkPopup", "networkConfirm", "networkRetry", "networkPrint", "networkCancel"];
+        const ids = ["reparti", "articoliBottoni", "articoliListaPanel", "articleSearch", "articoliLista", "carrello", "lineCount", "articleCount", "totalValue", "cartSummary", "tesseraGrossBox", "tesseraGrossValue", "quantityBox", "quantityDisplay", "amountBox", "selectedPrice", "keypad", "deleteItem", "discountItem", "tesseraItem", "disablePosForSale", "openConfig", "openSummary", "cashPayment", "cardPayment", "progressPopup", "appVersion", "connectionLight", "networkPopup", "networkConfirm", "networkRetry", "networkPrint", "networkCancel"];
         const missing = ids.filter(id => !root.querySelector("#" + id));
         if (missing.length) throw new Error("Elementi DOM mancanti: " + missing.join(", "));
         return { ok: true, elements: ids.length };

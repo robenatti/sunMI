@@ -313,9 +313,6 @@ AppViews.config = (() => {
         const allowed = (AppAPI.getAccountState().account || {}).allowPosTerminal === true;
         document.getElementById("posEnabled").checked = allowed && enabled;
         document.getElementById("posEnabled").disabled = !allowed;
-        document.getElementById("posRemotePermission").textContent = allowed
-            ? "Collegamento al terminale POS abilitato da account remoto."
-            : "Terminale automatico non abilitato dall'account remoto (allowPosTerminal). Pagamenti manuali disponibili.";
         ["nexiHost", "nexiPort", "nexiTerminalId", "nexiRegisterId",
             "testNexiConfig", "nexiLastTransaction", "nexiTotals"].forEach(id => {
                 document.getElementById(id).disabled = !allowed;
@@ -504,7 +501,7 @@ AppViews.config = (() => {
             "accountPaperWidthMm",
             "saveAccountConfig",
             "nexiHost", "nexiPort", "nexiTerminalId", "nexiRegisterId", "saveNexiConfig",
-            "posEnabled", "posRemotePermission", "nexiReceiptEnabled", "testNexiConfig", "nexiLastTransaction", "nexiTotals", "nexiLog"
+            "posEnabled", "nexiReceiptEnabled", "testNexiConfig", "nexiLastTransaction", "nexiTotals", "nexiLog"
         ]
 
         const missing = ids.filter(id => !root.querySelector("#" + id))

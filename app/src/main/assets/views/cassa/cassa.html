@@ -15,14 +15,19 @@
     <div class="right">
         <div class="lista" id="carrello"></div>
 
-        <div class="summary compact-summary">
-            <div class="box righe compact-box">
-                <span class="label">RIGHE</span>
-                <span class="value" id="lineCount">0</span>
+        <div class="summary compact-summary" id="cartSummary">
+            <div class="box compact-box summary-counts">
+                <div class="summary-count-line">
+                    <span class="label">RIGHE</span>
+                    <span class="value" id="lineCount">0</span>
+                </div>
+                <div class="summary-count-line">
+                    <span class="label">ARTICOLI</span>
+                    <span class="value" id="articleCount">0</span>
+                </div>
             </div>
-            <div class="box articoli compact-box">
-                <span class="label">ARTICOLI</span>
-                <span class="value" id="articleCount">0</span>
+            <div class="box compact-box summary-gross" id="tesseraGrossBox" hidden>
+                <span class="value" id="tesseraGrossValue">0,00 €</span>
             </div>
             <div class="box totale compact-box">
                 <span class="label">TOTALE</span>
