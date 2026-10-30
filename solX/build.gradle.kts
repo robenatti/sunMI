@@ -50,3 +50,15 @@ dependencies {
     implementation("com.sunmi:printerlibrary:1.0.15")
 
 }
+
+
+// Il BAT distribuisce gli asset del salone; la build reinstalla il driver SUNMI.
+// La sovrascrittura avviene prima del packaging dell'APK.
+val installSolXNativeReceipt = tasks.register<Copy>("installSolXNativeReceipt") {
+    from(layout.projectDirectory.file("native/receipt.js"))
+    into(layout.projectDirectory.dir("src/main/assets/config"))
+    rename { "receipt.js" }
+}
+tasks.matching { it.name == "preBuild" }.configureEach {
+    dependsOn(installSolXNativeReceipt)
+}
