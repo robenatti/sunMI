@@ -16,6 +16,7 @@ import android.os.ParcelFileDescriptor
 import android.provider.Settings
 import android.util.Base64
 import android.view.Gravity
+import android.view.inputmethod.InputMethodManager
 import android.view.ViewGroup
 import android.webkit.JavascriptInterface
 import android.webkit.JsResult
@@ -71,6 +72,17 @@ class MainActivity : Activity() {
         fun exec(json: String) {
             runOnUiThread {
                 handleCommand(json)
+            }
+        }
+
+        @JavascriptInterface
+        fun hideKeyboard() {
+            runOnUiThread {
+                // Il focus automatico della pagina può mostrare la tastiera con ritardo.
+                webView.postDelayed({
+                    val input = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
+                    input.hideSoftInputFromWindow(webView.windowToken, 0)
+                }, 120L)
             }
         }
     }
@@ -149,6 +161,50 @@ class MainActivity : Activity() {
         }
 
         webView.webViewClient = object : WebViewClient() {
+            override fun onPageFinished(view: WebView?, url: String?) {
+                super.onPageFinished(view, url)
+                if (url?.startsWith("https://appassets.androidplatform.net/assets/") != true) return
+
+                // Il focus automatico non apre la tastiera virtuale.
+                // Tocco diretto sul campo e tastiera fisica continuano a funzionare.
+                view?.evaluateJavascript(
+                    """
+                    (function () {
+                        if (window.__solxKeyboardGuard) return;
+                        window.__solxKeyboardGuard = true;
+                        var tappedField = null;
+                        var tappedAt = 0;
+
+                        function touched(event) {
+                            var node = event.target;
+                            tappedField = node && node.closest
+                                ? node.closest('input, textarea, [contenteditable="true"]')
+                                : null;
+                            if (!tappedField && node && node.closest) {
+                                var label = node.closest('label');
+                                if (label) tappedField = label.control;
+                            }
+                            tappedAt = Date.now();
+                        }
+
+                        document.addEventListener('pointerdown', touched, true);
+                        document.addEventListener('touchstart', touched, true);
+                        document.addEventListener('focusin', function (event) {
+                            var field = event.target;
+                            if (!field || !field.matches ||
+                                !field.matches('input, textarea, [contenteditable="true"]')) return;
+                            if (field === tappedField && Date.now() - tappedAt < 1250) return;
+                            if (window.Android && typeof Android.hideKeyboard === 'function')
+                                Android.hideKeyboard();
+                        }, true);
+
+                        if (window.Android && typeof Android.hideKeyboard === 'function')
+                            Android.hideKeyboard();
+                    })();
+                    """.trimIndent(), null
+                )
+            }
+
             override fun shouldInterceptRequest(
                 view: WebView?,
                 request: WebResourceRequest
