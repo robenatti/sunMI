@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <title>AltraCassa - Display cliente</title>
+    <link rel="stylesheet" href="display.css">
+</head>
+<body>
+    <main class="screen">
+        <section id="welcome" class="welcome">
+            <div class="welcome-mark"></div>
+            <h1 id="welcomeName">AltraCassa</h1>
+            <p>BENVENUTI</p>
+        </section>
+        <section id="receipt" class="receipt" hidden>
+            <header>
+                <p id="heading" class="overline">IL TUO CARRELLO</p>
+                <h1 id="storeName"></h1>
+            </header>
+            <div id="receiptRows" class="receipt-rows"></div>
+            <footer>
+                <div class="total-label">TOTALE</div>
+                <div id="total" class="total">0,00 €</div>
+                <div id="payment" class="payment"></div>
+            </footer>
+        </section>
+    </main>
+    <script src="display.js"></script>
+</body>
+</html>

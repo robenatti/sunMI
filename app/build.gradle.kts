@@ -26,6 +26,12 @@ android {
             )
         }
     }
+    // Le risorse del display cliente sono condivise con il modulo SolX.
+    sourceSets {
+        getByName("main") {
+            assets.srcDir("../shared")
+        }
+    }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11

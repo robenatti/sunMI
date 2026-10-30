@@ -44,6 +44,7 @@ class MainActivity : Activity() {
     private lateinit var webView: WebView
     private lateinit var printerDriver: SunmiPrinterDriver
     private lateinit var tcpDriver: TcpSocketDriver
+    private lateinit var secondoSchermo: SecondoSchermo
 
     private val callback = object : InnerResultCallback() {
         override fun onRunResult(isSuccess: Boolean) {}
@@ -162,6 +163,9 @@ class MainActivity : Activity() {
         WebView.setWebContentsDebuggingEnabled(true)
 
         webView.loadUrl("https://appassets.androidplatform.net/assets/index.html")
+
+        secondoSchermo = SecondoSchermo(this)
+        secondoSchermo.start()
     }
 
     @Suppress("DEPRECATION")
@@ -328,6 +332,11 @@ class MainActivity : Activity() {
                     sendSuccess(id, JSONObject().put("msg", "HELLO DAL NATIVE"))
                 }
 
+                "display_receipt" -> {
+                    val available = secondoSchermo.displayReceipt(req.getJSONObject("payload"))
+                    sendSuccess(id, JSONObject().put("available", available))
+                }
+
                 "hardware_status" -> {
                     val data = JSONObject()
                     data.put("androidBridge", true)
@@ -457,6 +466,7 @@ class MainActivity : Activity() {
     }
 
     override fun onDestroy() {
+        if (::secondoSchermo.isInitialized) secondoSchermo.stop()
         super.onDestroy()
         if (::tcpDriver.isInitialized) tcpDriver.closeAll()
         InnerPrinterManager.getInstance().unBindService(this, printerCallback)

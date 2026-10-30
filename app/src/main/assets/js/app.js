@@ -34,6 +34,7 @@ const AppAPI = (() => {
         });
         Barcode.start();
         POS.startRecovery();
+        SecondoSchermo.init();
         initialized = true;
     }
 
