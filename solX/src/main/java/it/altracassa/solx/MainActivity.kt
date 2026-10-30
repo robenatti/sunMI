@@ -216,7 +216,10 @@ class MainActivity : Activity() {
 
         webView.addJavascriptInterface(Bridge(), "Android")
 
-        WebView.setWebContentsDebuggingEnabled(true)
+        // In release la WebView non deve essere ispezionabile da Chrome.
+        WebView.setWebContentsDebuggingEnabled(
+            (applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0
+        )
 
         webView.loadUrl("https://appassets.androidplatform.net/assets/index.html")
 
